@@ -37,7 +37,7 @@ function FileUploadChart() {
     // Range of indices to display (for zoom/select)
     const [range, setRange] = useState<{ start: number, end: number }>({ start: 0, end: 0 });
     const chartRef = useRef<ChartJS<"line", (number | null)[]> | null>(null);
-
+    const [isDragging, setIsDragging] = useState(false);
 
     // Type for a row of parsed CSV/JSON
     type DataRow = Record<string, string | number | null | undefined>;
@@ -46,6 +46,12 @@ function FileUploadChart() {
     const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setFileInfo({ name: file.name, size: file.size, type: file.type });
+        setFileInfo({
+            name: file.name,
+            size: file.size,
+            type: file.type || 'unknown',
+        });
         const ext = file.name.split(".").pop()?.toLowerCase();
         if (ext === "csv") {
             Papa.parse<DataRow>(file, {
@@ -183,6 +189,8 @@ function FileUploadChart() {
     // Local state for index inputs
     const [startInput, setStartInput] = useState<string>("0");
     const [endInput, setEndInput] = useState<string>("0");
+    const [fileName, setFileName] = useState<string | null>(null);
+    const [fileInfo, setFileInfo] = useState<{ name: string; size: number; type: string } | null>(null);
 
     // Sync input fields with range when data changes
     React.useEffect(() => {
@@ -194,16 +202,53 @@ function FileUploadChart() {
     const filteredLegend = legendSearch.trim().length === 0
         ? datasets
         : datasets.filter(ds => typeof ds.label === 'string' && ds.label.toLowerCase().includes(legendSearch.trim().toLowerCase()));
-
+    const fileInputRef = useRef<HTMLInputElement>(null);
     return (
         <div className="w-full py-10">
             <h1 className="text-3xl font-bold mb-6">Upload Car Data Log</h1>
-            <input
-                type="file"
-                accept=".csv,.json"
-                onChange={handleFile}
-                className="mb-6"
-            />
+            <div
+                onClick={() => {
+                    fileInputRef.current?.click();
+                }}
+                onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const file = e.dataTransfer.files[0];
+                    if (file) {
+                        handleFile({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
+                    }
+                }}
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                    isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:bg-gray-50"
+                }`}
+            >
+                {fileInfo && (
+                    <div className="mt-4 p-3 bg-blue-50 text-blue-800 border border-blue-200 rounded-md">
+                        <p className="text-sm font-medium">Файл загружен:</p>
+                        <ul className="text-sm list-disc list-inside mt-1 space-y-1">
+                            <li>Имя: {fileInfo.name}</li>
+                            <li>Тип: {fileInfo.type}</li>
+                            <li>Размер: {(fileInfo.size / 1024).toFixed(1)} KB</li>
+                        </ul>
+                    </div>
+                )}
+                {!fileInfo && (<div><p className="text-lg font-medium mb-2">
+                    {isDragging ? "Отпустите файл сюда" : "Перетащите CSV или JSON файл сюда"}
+                </p>
+                <p className="text-sm text-gray-500">или нажмите, чтобы выбрать файл</p></div>)}
+                <input
+                    type="file"
+                    accept=".csv,.json"
+                    ref={fileInputRef}
+                    onChange={handleFile}
+                    className="hidden"
+                />
+            </div>
             {error && <div className="text-red-500 mb-4">{error}</div>}
             {fullLabels.length > 0 && fullDatasets.length > 0 && (
                 <div className="w-full overflow-x-auto bg-white rounded shadow p-4 mb-8">

@@ -38,8 +38,6 @@ function FileUploadChart() {
     const [range, setRange] = useState<{ start: number, end: number }>({ start: 0, end: 0 });
     const chartRef = useRef<ChartJS<"line", (number | null)[]> | null>(null);
 
-    // Skip lines state
-    const [skipLines, setSkipLines] = useState(0);
 
     // Type for a row of parsed CSV/JSON
     type DataRow = Record<string, string | number | null | undefined>;
@@ -54,11 +52,16 @@ function FileUploadChart() {
                 header: true,
                 skipEmptyLines: true,
                 beforeFirstChunk: (chunk) => {
-                    if (skipLines > 0) {
-                        // Remove the first N lines
-                        return chunk.split(/\r?\n/).slice(skipLines).join("\n");
+                    const lines = chunk.split(/\r?\n/);
+
+                    // Пропускаем все строки с начала, пока они начинаются с #
+                    let i = 0;
+                    while (i < lines.length && lines[i].trimStart().startsWith("#")) {
+                        i++;
                     }
-                    return chunk;
+
+                    // Возвращаем оставшиеся строки, начиная с первой неподходящей
+                    return lines.slice(i).join("\n");
                 },
                 complete: (results) => {
                     const rows = results.data as DataRow[];
@@ -79,7 +82,7 @@ function FileUploadChart() {
                             const max = Math.max(...nums);
                             const norm = raw.map((v) => (typeof v === 'number' && v !== null && max !== min) ? ((v - min) / (max - min)) * 100 : 0);
                             // Only show Engine Speed or Boost by default
-                            const show = key.includes('Engine Speed') || key.includes('Boost');
+                            const show = key.includes('Engine Speed') || key.includes('rpm') ||key.includes('Boost');
                             return {
                                 label: key,
                                 data: norm,
@@ -107,9 +110,6 @@ function FileUploadChart() {
                 try {
                     let json = JSON.parse(event.target?.result as string) as DataRow[];
                     if (Array.isArray(json) && json.length > 0) {
-                        if (skipLines > 0) {
-                            json = json.slice(skipLines);
-                        }
                         const keys = Object.keys(json[0]);
                         const xLabels = json.map((row) => row[keys[0]] as string);
                         const fullDs: MyChartDataset[] = keys.slice(1).map((key, i) => {
@@ -198,17 +198,6 @@ function FileUploadChart() {
     return (
         <div className="w-full py-10">
             <h1 className="text-3xl font-bold mb-6">Upload Car Data Log</h1>
-            <div className="flex items-center gap-4 mb-4">
-                <label className="font-semibold">Skip lines:</label>
-                <input
-                    type="number"
-                    min={0}
-                    value={skipLines}
-                    onChange={e => setSkipLines(Math.max(0, Number(e.target.value)))}
-                    className="border rounded px-2 py-1 w-24"
-                />
-                <span className="text-gray-500 text-xs">(Number of lines to skip before parsing)</span>
-            </div>
             <input
                 type="file"
                 accept=".csv,.json"
@@ -336,7 +325,7 @@ function FileUploadChart() {
                                                         if (typeof leftVal === 'number' && typeof rightVal === 'number') {
                                                             const minIdx = Math.max(0, Math.round(leftVal));
                                                             const maxIdx = Math.min(fullLabels.length - 1, Math.round(rightVal));
-                                                            setRange({ start: Math.min(minIdx, maxIdx), end: Math.max(minIdx, maxIdx) });
+                                                            setRange({ start: range.start + Math.min(minIdx, maxIdx), end: range.start + Math.max(minIdx, maxIdx) });
                                                             console.log(`Zoomed to range: ${minIdx} - ${maxIdx}`);
                                                         }
                                                     }

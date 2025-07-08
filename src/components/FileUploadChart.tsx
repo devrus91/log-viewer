@@ -2,7 +2,6 @@
 import React, { useState, useRef } from "react";
 import Papa from "papaparse";
 import { Line } from "react-chartjs-2";
-import type { ChartJSOrUndefined } from "react-chartjs-2";
 
 import {
     Chart as ChartJS,
@@ -37,7 +36,7 @@ function FileUploadChart() {
     const [error, setError] = useState<string>("");
     // Range of indices to display (for zoom/select)
     const [range, setRange] = useState<{ start: number, end: number }>({ start: 0, end: 0 });
-    const chartRef = useRef<ChartJSOrUndefined<"line", (number | null)[]> | null>(null);
+    const chartRef = useRef<ChartJS<"line", (number | null)[]> | null>(null);
 
     // Skip lines state
     const [skipLines, setSkipLines] = useState(0);

@@ -28,7 +28,7 @@ ChartJS.register(
 );
 
 import type { ChartDataset } from "chart.js";
-
+function FileUploadChart() {
     const [fullLabels, setFullLabels] = useState<string[]>([]);
     // Extend ChartDataset to allow originalData (for tooltips)
     type MyChartDataset = ChartDataset<"line", (number | null)[]> & { originalData?: (number | null)[] };
@@ -396,4 +396,7 @@ import type { ChartDataset } from "chart.js";
             )}
         </div>
     );
+}
 
+
+export default FileUploadChart;

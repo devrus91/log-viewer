@@ -258,7 +258,7 @@ function FileUploadChart() {
                         })}
                     </div>
                     <div className="flex items-center gap-4 mb-4 w-full flex-wrap">
-                        <label className="font-semibold">Start index:</label>
+                        <label className="font-semibold placeholder-gray-700 text-gray-900">Start index:</label>
                         <input
                             type="number"
                             min={0}
@@ -269,9 +269,9 @@ function FileUploadChart() {
                                 const val = Number(startInput);
                                 setRange(r => ({ ...r, start: Math.max(0, Math.min(isNaN(val) ? 0 : val, r.end)) }));
                             }}
-                            className="border rounded px-2 py-1 w-24"
+                            className="border rounded px-2 py-1 w-24 placeholder-gray-700 text-gray-900"
                         />
-                        <label className="font-semibold">End index:</label>
+                        <label className="font-semibold placeholder-gray-700 text-gray-900">End index:</label>
                         <input
                             type="number"
                             min={range.start}
@@ -282,7 +282,7 @@ function FileUploadChart() {
                                 const val = Number(endInput);
                                 setRange(r => ({ ...r, end: Math.min(fullLabels.length - 1, Math.max(isNaN(val) ? r.start : val, r.start)) }));
                             }}
-                            className="border rounded px-2 py-1 w-24"
+                            className="border rounded px-2 py-1 w-24 placeholder-gray-700 text-gray-900"
                         />
                         <span className="text-gray-500">(0 to {fullLabels.length - 1})</span>
                         <button onClick={handleResetZoom} className="ml-4 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">Reset Zoom</button>

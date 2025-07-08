@@ -2,6 +2,7 @@
 import React, { useState, useRef } from "react";
 import Papa from "papaparse";
 import { Line } from "react-chartjs-2";
+import type { ChartJSOrUndefined } from "react-chartjs-2";
 
 import {
     Chart as ChartJS,
@@ -12,7 +13,6 @@ import {
     Title,
     Tooltip,
     Legend,
-    ChartOptions,
 } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
 
@@ -29,8 +29,6 @@ ChartJS.register(
 
 import type { ChartDataset } from "chart.js";
 
-export default function FileUploadChart() {
-    const [data, setData] = useState<any>(null);
     const [fullLabels, setFullLabels] = useState<string[]>([]);
     // Extend ChartDataset to allow originalData (for tooltips)
     type MyChartDataset = ChartDataset<"line", (number | null)[]> & { originalData?: (number | null)[] };
@@ -39,11 +37,13 @@ export default function FileUploadChart() {
     const [error, setError] = useState<string>("");
     // Range of indices to display (for zoom/select)
     const [range, setRange] = useState<{ start: number, end: number }>({ start: 0, end: 0 });
-    const chartRef = useRef<any>(null);
-
+    const chartRef = useRef<ChartJSOrUndefined<"line", (number | null)[]> | null>(null);
 
     // Skip lines state
     const [skipLines, setSkipLines] = useState(0);
+
+    // Type for a row of parsed CSV/JSON
+    type DataRow = Record<string, string | number | null | undefined>;
 
     // On file load, set fullLabels/fullDatasets, and initialize datasets (for legend visibility)
     const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +51,7 @@ export default function FileUploadChart() {
         if (!file) return;
         const ext = file.name.split(".").pop()?.toLowerCase();
         if (ext === "csv") {
-            Papa.parse(file, {
+            Papa.parse<DataRow>(file, {
                 header: true,
                 skipEmptyLines: true,
                 beforeFirstChunk: (chunk) => {
@@ -62,22 +62,23 @@ export default function FileUploadChart() {
                     return chunk;
                 },
                 complete: (results) => {
-                    if (results.data && results.data.length > 0) {
-                        const keys = Object.keys(results.data[0] as Record<string, any>);
-                        const xLabels = results.data.map((row: any) => row[keys[0]]);
+                    const rows = results.data as DataRow[];
+                    if (rows && rows.length > 0) {
+                        const keys = Object.keys(rows[0]);
+                        const xLabels = rows.map((row) => row[keys[0]] as string);
                         // For each column except the first, create a normalized dataset and preserve original
-                        const fullDs: MyChartDataset[] = keys.slice(1).map((key, idx) => {
-                            const color = `hsl(${(idx * 360) / keys.length}, 70%, 50%)`;
-                            const raw = results.data.map((row: any) => {
+                        const fullDs: MyChartDataset[] = keys.slice(1).map((key, i) => {
+                            const color = `hsl(${(i * 360) / keys.length}, 70%, 50%)`;
+                            const raw = rows.map((row) => {
                                 const val = row[key];
                                 const num = typeof val === 'string' ? parseFloat(val.replace(/,/g, '')) : Number(val);
                                 return isNaN(num) ? null : num;
                             });
-                            // Normalize to 0-1
-                            const nums = raw.filter((v: any) => typeof v === 'number' && v !== null) as number[];
+                            // Normalize to 0-100
+                            const nums = raw.filter((v): v is number => typeof v === 'number' && v !== null);
                             const min = Math.min(...nums);
                             const max = Math.max(...nums);
-                            const norm = raw.map((v: any) => (typeof v === 'number' && v !== null && max !== min) ? ((v - min) / (max - min)) * 100 : 0);
+                            const norm = raw.map((v) => (typeof v === 'number' && v !== null && max !== min) ? ((v - min) / (max - min)) * 100 : 0);
                             // Only show Engine Speed or Boost by default
                             const show = key.includes('Engine Speed') || key.includes('Boost');
                             return {
@@ -92,9 +93,7 @@ export default function FileUploadChart() {
                         });
                         setFullLabels(xLabels);
                         setFullDatasets(fullDs);
-                        // For legend toggling, keep a separate datasets state (just for hidden prop)
                         setDatasets(fullDs.map(ds => ({ ...ds })));
-                        setData(results.data);
                         setRange({ start: 0, end: xLabels.length - 1 });
                         setError("");
                     } else {
@@ -107,25 +106,25 @@ export default function FileUploadChart() {
             const reader = new FileReader();
             reader.onload = (event) => {
                 try {
-                    let json = JSON.parse(event.target?.result as string);
+                    let json = JSON.parse(event.target?.result as string) as DataRow[];
                     if (Array.isArray(json) && json.length > 0) {
                         if (skipLines > 0) {
                             json = json.slice(skipLines);
                         }
-                        const keys = Object.keys(json[0] as Record<string, any>);
-                        const xLabels = json.map((row: any) => row[keys[0]]);
-                        const fullDs: MyChartDataset[] = keys.slice(1).map((key, idx) => {
-                            const color = `hsl(${(idx * 360) / keys.length}, 70%, 50%)`;
-                            const raw = json.map((row: any) => {
+                        const keys = Object.keys(json[0]);
+                        const xLabels = json.map((row) => row[keys[0]] as string);
+                        const fullDs: MyChartDataset[] = keys.slice(1).map((key, i) => {
+                            const color = `hsl(${(i * 360) / keys.length}, 70%, 50%)`;
+                            const raw = json.map((row) => {
                                 const val = row[key];
                                 const num = typeof val === 'string' ? parseFloat(val.replace(/,/g, '')) : Number(val);
                                 return isNaN(num) ? null : num;
                             });
-                            // Normalize to 0-1
-                            const nums = raw.filter((v: any) => typeof v === 'number' && v !== null) as number[];
+                            // Normalize to 0-100
+                            const nums = raw.filter((v): v is number => typeof v === 'number' && v !== null);
                             const min = Math.min(...nums);
                             const max = Math.max(...nums);
-                            const norm = raw.map((v: any) => (typeof v === 'number' && v !== null && max !== min) ? ((v - min) / (max - min)) * 100 : 0);
+                            const norm = raw.map((v) => (typeof v === 'number' && v !== null && max !== min) ? ((v - min) / (max - min)) * 100 : 0);
                             // Only show Engine Speed or Boost by default
                             const show = key.includes('Engine Speed') || key.includes('Boost');
                             return {
@@ -141,7 +140,6 @@ export default function FileUploadChart() {
                         setFullLabels(xLabels);
                         setFullDatasets(fullDs);
                         setDatasets(fullDs.map(ds => ({ ...ds })));
-                        setData(json);
                         setRange({ start: 0, end: xLabels.length - 1 });
                         setError("");
                     } else {
@@ -161,8 +159,8 @@ export default function FileUploadChart() {
 
     // Reset zoom handler
     const handleResetZoom = () => {
-        if (chartRef.current) {
-            chartRef.current.resetZoom && chartRef.current.resetZoom();
+        if (chartRef.current && typeof chartRef.current.resetZoom === 'function') {
+            chartRef.current.resetZoom();
             setRange({ start: 0, end: fullLabels.length - 1 });
         }
     };
@@ -173,8 +171,8 @@ export default function FileUploadChart() {
     // Always slice from fullLabels/fullDatasets for chart rendering
     const slicedLabels = fullLabels.slice(range.start, range.end + 1);
     // For legend toggling, use datasets[] for hidden prop, but always slice from fullDatasets
-    const slicedDatasets = fullDatasets.map((fullDs, idx) => {
-        const legendHidden = datasets[idx]?.hidden ?? false;
+    const slicedDatasets = fullDatasets.map((fullDs, i) => {
+        const legendHidden = datasets[i]?.hidden ?? false;
         return {
             ...fullDs,
             data: fullDs.data.slice(range.start, range.end + 1),
@@ -183,10 +181,20 @@ export default function FileUploadChart() {
         };
     });
 
+    // Local state for index inputs
+    const [startInput, setStartInput] = useState<string>("0");
+    const [endInput, setEndInput] = useState<string>("0");
+
+    // Sync input fields with range when data changes
+    React.useEffect(() => {
+        setStartInput(range.start.toString());
+        setEndInput(range.end.toString());
+    }, [range.start, range.end]);
+
     // Filter legend buttons by search
     const filteredLegend = legendSearch.trim().length === 0
         ? datasets
-        : datasets.filter(ds => ds.label && ds.label.toLowerCase().includes(legendSearch.trim().toLowerCase()));
+        : datasets.filter(ds => typeof ds.label === 'string' && ds.label.toLowerCase().includes(legendSearch.trim().toLowerCase()));
 
     return (
         <div className="w-full py-10">
@@ -232,7 +240,7 @@ export default function FileUploadChart() {
                         {filteredLegend.length === 0 && (
                             <span className="text-gray-400 text-xs">No labels found</span>
                         )}
-                        {filteredLegend.map((ds, idx) => {
+                        {filteredLegend.map((ds) => {
                             // Find the real index in datasets (for toggling hidden)
                             const realIdx = datasets.findIndex(d => d.label === ds.label);
                             const color = typeof ds.borderColor === 'string' ? ds.borderColor : '#888';
@@ -256,8 +264,12 @@ export default function FileUploadChart() {
                             type="number"
                             min={0}
                             max={fullLabels.length - 1}
-                            value={range.start}
-                            onChange={e => setRange(r => ({ ...r, start: Math.max(0, Math.min(Number(e.target.value), r.end)) }))}
+                            value={startInput}
+                            onChange={e => setStartInput(e.target.value)}
+                            onBlur={() => {
+                                const val = Number(startInput);
+                                setRange(r => ({ ...r, start: Math.max(0, Math.min(isNaN(val) ? 0 : val, r.end)) }));
+                            }}
                             className="border rounded px-2 py-1 w-24"
                         />
                         <label className="font-semibold">End index:</label>
@@ -265,8 +277,12 @@ export default function FileUploadChart() {
                             type="number"
                             min={range.start}
                             max={fullLabels.length - 1}
-                            value={range.end}
-                            onChange={e => setRange(r => ({ ...r, end: Math.min(fullLabels.length - 1, Math.max(Number(e.target.value), r.start)) }))}
+                            value={endInput}
+                            onChange={e => setEndInput(e.target.value)}
+                            onBlur={() => {
+                                const val = Number(endInput);
+                                setRange(r => ({ ...r, end: Math.min(fullLabels.length - 1, Math.max(isNaN(val) ? r.start : val, r.start)) }));
+                            }}
                             className="border rounded px-2 py-1 w-24"
                         />
                         <span className="text-gray-500">(0 to {fullLabels.length - 1})</span>
@@ -340,8 +356,8 @@ export default function FileUploadChart() {
                                                 const chart = context.chart;
                                                 const dsIndex = context.datasetIndex;
                                                 const meta = chart.getDatasetMeta(dsIndex);
-                                                if (meta.hidden) return null;
-                                                const ds = context.dataset as any;
+                                                if (meta.hidden) return undefined;
+                                                const ds = context.dataset as { label?: string; originalData?: (number | null)[] };
                                                 const idx = context.dataIndex;
                                                 const orig = ds.originalData && ds.originalData[idx] != null ? ds.originalData[idx] : null;
                                                 let label = ds.label || '';
@@ -380,4 +396,4 @@ export default function FileUploadChart() {
             )}
         </div>
     );
-}
+

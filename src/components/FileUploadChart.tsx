@@ -337,6 +337,16 @@ function FileUploadChart() {
                                     mode: 'index',
                                     intersect: false,
                                 },
+                                elements: {
+        line: {
+            tension: 0.1, // можно оставить, это сглаживание линии
+        },
+        point: {
+            radius: 0,           // Убираем радиус точек
+            hoverRadius: 0,      // Также убираем подсветку при наведении
+            hitRadius: 0,        // Опционально: уменьшаем зону клика
+        },
+    },
                                 plugins: {
                                     legend: {
                                         display: false,

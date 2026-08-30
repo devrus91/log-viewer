@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown, Eye, EyeOff, FunctionSquare, Search, Settings2 } from "lucide-react";
+import { Check, ChevronsUpDown, Eye, EyeOff, FunctionSquare, Pencil, Search, Settings2 } from "lucide-react";
 import { datasetStore } from "@/data/dataset-store";
 import { useWorkspaceStore } from "@/state/workspace-store";
 
-export function ChannelBrowser({ onOpenRules }: { onOpenRules?: () => void }) {
+export function ChannelBrowser({ onOpenRules, onEditCalculated }: { onOpenRules?: () => void; onEditCalculated?: (channelId: string) => void }) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const { channels, selectedChannelIds, activeChannelId, hiddenChannelIds, cursorIndex, toggleChannel, toggleHidden, setActiveChannel, sidebarTab, setSidebarTab, metadata, presets, applyPreset, diagnostics, diagnosticsEnabled, diagnosticFilter, setDiagnosticFilter, focusDiagnostic } = useWorkspaceStore();
@@ -30,6 +30,7 @@ export function ChannelBrowser({ onOpenRules }: { onOpenRules?: () => void }) {
           <button className="channel-toggle" aria-label={`Toggle ${channel.name}`} onClick={() => toggleChannel(channel.id)} style={{ borderColor: channel.color, background: selected ? channel.color : "transparent" }}>{selected && <Check size={10} />}</button>
           <button className="channel-main" onClick={() => selected ? setActiveChannel(channel.id) : toggleChannel(channel.id)}><span className="channel-name">{channel.type === "calculated" && <FunctionSquare size={12} />}{channel.name}</span><small>{channel.unit}</small></button>
           <span className="channel-value">{current(channel.id)}</span>
+          {channel.type === "calculated" && <button className="channel-action" aria-label={`Edit ${channel.name}`} title="Edit calculated channel" onClick={() => onEditCalculated?.(channel.id)}><Pencil size={12} /></button>}
           {selected && <button className="eye" aria-label={hidden ? "Show channel" : "Hide channel"} onClick={() => toggleHidden(channel.id)}>{hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>}
         </div>; })}
       </div>)}</div>

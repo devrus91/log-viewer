@@ -43,6 +43,7 @@ interface WorkspaceState {
   valueDisplayMode: "panel" | "tooltip";
   setDataset: (metadata: LogMetadata, channels: ChannelMetadata[], diagnostics?: DiagnosticAnalysis) => void;
   addCalculatedChannel: (channel: ChannelMetadata) => void;
+  updateCalculatedChannels: (channels: ChannelMetadata[], activeChannelId: string) => void;
   setMode: (mode: WorkspaceMode) => void;
   setAxisMode: (mode: AxisMode) => void;
   toggleChannel: (id: string) => void;
@@ -128,6 +129,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const channels = existing ? state.channels.map((item) => item.id === existing.id ? channel : item) : [...state.channels, channel];
     const selectedChannelIds = Array.from(new Set([...state.selectedChannelIds.map((id) => id === existing?.id ? channel.id : id), channel.id]));
     return { channels, selectedChannelIds, activeChannelId: channel.id };
+  }),
+  updateCalculatedChannels: (updated, activeChannelId) => set((state) => {
+    const replacements = new Map(updated.map((channel) => [channel.id, channel]));
+    return { channels: state.channels.map((channel) => replacements.get(channel.id) ?? channel), activeChannelId };
   }),
   setMode: (mode) => set({ mode }),
   setAxisMode: (axisMode) => set({ axisMode }),

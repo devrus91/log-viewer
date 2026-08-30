@@ -42,4 +42,21 @@ describe("CSV → chart state → formula → heatmap workflow", () => {
     expect(calculated[0].expression).toBe("[Engine Speed] / 500");
     expect(useWorkspaceStore.getState().selectedChannelIds.filter((id) => id === channel.id)).toHaveLength(1);
   });
+
+  it("refreshes an edited calculated chain without changing the selection", () => {
+    const dataset = parseCsv("Time,Engine Speed\n0,1000\n1,2000");
+    useWorkspaceStore.getState().setDataset(dataset.metadata, dataset.channels);
+    const first = { ...dataset.channels[1], id: "calc-rpm", name: "Scaled RPM", originalName: "Scaled RPM", type: "calculated" as const, expression: "[Engine Speed] / 1000" };
+    const second = { ...first, id: "calc-double", name: "Double RPM", originalName: "Double RPM", expression: "[Scaled RPM] * 2" };
+    useWorkspaceStore.getState().addCalculatedChannel(first);
+    useWorkspaceStore.getState().addCalculatedChannel(second);
+    const selection = useWorkspaceStore.getState().selectedChannelIds;
+
+    useWorkspaceStore.getState().updateCalculatedChannels([{ ...first, name: "RPM k" }, { ...second, expression: "[RPM k] * 2" }], first.id);
+
+    expect(useWorkspaceStore.getState().channels.find((item) => item.id === first.id)?.name).toBe("RPM k");
+    expect(useWorkspaceStore.getState().channels.find((item) => item.id === second.id)?.expression).toBe("[RPM k] * 2");
+    expect(useWorkspaceStore.getState().selectedChannelIds).toEqual(selection);
+    expect(useWorkspaceStore.getState().activeChannelId).toBe(first.id);
+  });
 });

@@ -26,10 +26,18 @@ export function loadCalculatedChannelDefinitions(storage: Storage = window.local
 
 export function saveCalculatedChannelDefinition(definition: CalculatedChannelDefinition, storage: Storage = window.localStorage): CalculatedChannelDefinition {
   const definitions = loadCalculatedChannelDefinitions(storage);
-  const existing = definitions.find((item) => item.id === definition.id || item.name.toLocaleLowerCase() === definition.name.toLocaleLowerCase());
+  const existing = definitions.find((item) => item.id === definition.id) ?? definitions.find((item) => item.name.toLocaleLowerCase() === definition.name.toLocaleLowerCase());
   const saved = { ...structuredClone(definition), id: existing?.id ?? definition.id, createdAt: existing?.createdAt ?? definition.createdAt };
-  const next = existing ? definitions.map((item) => item.id === existing.id ? saved : item) : [...definitions, saved];
+  const next = existing ? definitions.map((item) => {
+    if (item.id === existing.id) return saved;
+    return existing.name === saved.name ? item : { ...item, expression: replaceChannelReference(item.expression, existing.name, saved.name) };
+  }) : [...definitions, saved];
   const payload: StoredCalculatedChannels = { schemaVersion: CALCULATED_CHANNELS_SCHEMA_VERSION, definitions: next };
   storage.setItem(CALCULATED_CHANNELS_KEY, JSON.stringify(payload));
   return structuredClone(saved);
+}
+
+function replaceChannelReference(expression: string, previousName: string, nextName: string): string {
+  const escaped = previousName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return expression.replace(new RegExp(`\\[\\s*${escaped}\\s*\\]`, "g"), `[${nextName}]`);
 }

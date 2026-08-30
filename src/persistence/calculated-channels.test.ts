@@ -30,6 +30,17 @@ describe("calculated channel persistence", () => {
     expect(loadCalculatedChannelDefinitions()).toEqual([{ ...definition, expression: "[Boost Actual]" }]);
   });
 
+  it("updates dependent formulas when a channel is renamed", () => {
+    saveCalculatedChannelDefinition(definition);
+    saveCalculatedChannelDefinition({ ...definition, id: "calc-scaled-error", name: "Scaled Error", expression: "[Boost Error] * SCALE", createdAt: 456 });
+
+    saveCalculatedChannelDefinition({ ...definition, name: "Pressure Error" });
+
+    const stored = loadCalculatedChannelDefinitions();
+    expect(stored.find((item) => item.id === "calc-boost-error")?.name).toBe("Pressure Error");
+    expect(stored.find((item) => item.id === "calc-scaled-error")?.expression).toBe("[Pressure Error] * SCALE");
+  });
+
   it("ignores corrupted local storage data", () => {
     window.localStorage.setItem(CALCULATED_CHANNELS_KEY, "not-json");
 

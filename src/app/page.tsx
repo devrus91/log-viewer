@@ -1,16 +1,10 @@
 "use client";
-import Image from "next/image";
-import dynamic from "next/dynamic";
 
-const FileUploadChart = dynamic(
-  () => import("../components/FileUploadChart"),
-  { ssr: false }
-);
+import { ImportScreen } from "@/components/ImportScreen";
+import { LogWorkspace } from "@/components/LogWorkspace";
+import { useWorkspaceStore } from "@/state/workspace-store";
 
 export default function Home() {
-  return (
-    <div className="min-h-screen p-8 pb-20 font-[family-name:var(--font-geist-sans)]">
-      <FileUploadChart />
-    </div>
-  );
+  const metadata = useWorkspaceStore((state) => state.metadata);
+  return metadata ? <LogWorkspace /> : <ImportScreen />;
 }

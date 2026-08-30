@@ -1,31 +1,38 @@
-# DataZapp
+# Automotive Log Viewer
 
-A Next.js app to upload car data logs (CSV/JSON) and visualize them using interactive charts.
+Local-first web workspace for ECU/logger CSV analysis. Files stay in the browser; parsing, formulas and heatmap aggregation run in a Web Worker.
 
-## Features
-- Upload car data logs (CSV/JSON)
-- Parse and store uploaded data
-- Visualize data with charts (e.g., Chart.js)
-- Modern UI with Tailwind CSS
+## Run
 
-## Getting Started
+```bash
+npm install
+npm run dev
+```
 
-1. Install dependencies:
-   ```sh
-   npm install
-   ```
-2. Run the development server:
-   ```sh
-   npm run dev
-   ```
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open `http://localhost:3000`. Drop a CSV file or use the included generated dyno-pull sample.
 
-## Project Structure
-- `/src/app` - Main app pages and routes
-- `/src/components` - React components
+Live application: [devrus91.github.io/log-viewer](https://devrus91.github.io/log-viewer/). Pushes to `main` are validated and deployed automatically with GitHub Actions.
 
-## To Do
-- Implement file upload page
-- Add data parsing and storage
-- Integrate charting library
-- Build data visualization page
+## Architecture
+
+- `src/domain` — strict domain types and safe formula AST/parser/evaluator.
+- `src/data` — CSV ingestion, metadata inference and typed-array dataset registry outside React state.
+- `src/analytics` — O(N) heatmap binning and min/max rendering downsampling.
+- `src/diagnostics` — semantic channel resolution, WOT pull detection, versioned rule profiles, event correlation and the data-driven diagnostic engine.
+- `src/workers` — worker protocol for CSV, formulas, heatmaps and automatic diagnostics.
+- `src/state` — Zustand metadata/view state; samples never enter React state.
+- `src/components` — Single, synchronized Split, Heatmap, virtual Raw view, navigator, channel browser and Formula Builder.
+- `src/persistence` — IndexedDB presets; diagnostic profiles use a separately versioned local repository with non-destructive migrations.
+
+uPlot supplies Canvas rendering and low-overhead cursor/scale control. Heatmaps use a dedicated Canvas renderer. The static Next.js export has no backend and sends no log data over the network.
+
+## Quality gates
+
+```bash
+npm run lint
+npm test
+npm run build
+npm audit --omit=dev
+```
+
+Tests cover delimiter/quoted CSV parsing, duplicate headers, formula parsing/evaluation and cycles, heatmap filters/binning, min/max downsampling, every built-in diagnostic detector, WOT scoping, unique event identities and diagnostic-profile migration/reset behavior.

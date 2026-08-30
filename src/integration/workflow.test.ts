@@ -28,4 +28,18 @@ describe("CSV → chart state → formula → heatmap workflow", () => {
     expect(heatmap.cells.reduce((sum, cell) => sum + cell.count, 0)).toBe(3);
     expect(datasetStore.getColumn(actual.id)?.[0]).toBe(1.2);
   });
+
+  it("updates a recalculated channel in place", () => {
+    const dataset = parseCsv("Time,Engine Speed\n0,1000\n1,2000");
+    useWorkspaceStore.getState().setDataset(dataset.metadata, dataset.channels);
+    const channel = { ...dataset.channels[1], id: "calc-rpm", name: "Scaled RPM", originalName: "Scaled RPM", type: "calculated" as const, expression: "[Engine Speed] / 1000" };
+
+    useWorkspaceStore.getState().addCalculatedChannel(channel);
+    useWorkspaceStore.getState().addCalculatedChannel({ ...channel, expression: "[Engine Speed] / 500" });
+
+    const calculated = useWorkspaceStore.getState().channels.filter((item) => item.id === channel.id);
+    expect(calculated).toHaveLength(1);
+    expect(calculated[0].expression).toBe("[Engine Speed] / 500");
+    expect(useWorkspaceStore.getState().selectedChannelIds.filter((id) => id === channel.id)).toHaveLength(1);
+  });
 });

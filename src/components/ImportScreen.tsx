@@ -2,8 +2,10 @@
 
 import { useRef, useState } from "react";
 import { Activity, FileUp, LockKeyhole, Zap } from "lucide-react";
-import { parseCsvInWorker } from "@/workers/client";
+import { calculateFormulaInWorker, parseCsvInWorker } from "@/workers/client";
 import { datasetStore } from "@/data/dataset-store";
+import { materializeCalculatedChannels } from "@/data/calculated-channels";
+import { loadCalculatedChannelDefinitions } from "@/persistence/calculated-channels";
 import { useWorkspaceStore } from "@/state/workspace-store";
 import { createDiagnosticRuleRepository, getActiveDiagnosticProfile } from "@/diagnostics/persistence/LocalStorageDiagnosticRuleRepository";
 
@@ -16,7 +18,15 @@ export function ImportScreen() {
   const load = async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".csv")) { setError("Choose a .csv telemetry log"); return; }
     setLoading(true); setError("");
-    try { const repository = createDiagnosticRuleRepository(); const profile = getActiveDiagnosticProfile(repository); const dataset = await parseCsvInWorker(file, profile); datasetStore.load(dataset); setDataset(dataset.metadata, dataset.channels, dataset.analysis); }
+    try {
+      const repository = createDiagnosticRuleRepository();
+      const profile = getActiveDiagnosticProfile(repository);
+      const dataset = await parseCsvInWorker(file, profile);
+      const restored = await materializeCalculatedChannels(loadCalculatedChannelDefinitions(), dataset.channels, dataset.columns, dataset.metadata.rows, calculateFormulaInWorker);
+      datasetStore.load(dataset);
+      restored.forEach(({ channel, values }) => datasetStore.setColumn(channel, values));
+      setDataset(dataset.metadata, [...dataset.channels, ...restored.map(({ channel }) => channel)], dataset.analysis);
+    }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Could not parse this log"); }
     finally { setLoading(false); }
   };

@@ -123,7 +123,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       heatmap: { ...defaultHeatmap, xChannelId: rpm, yChannelId: throttle, valueChannelId: boost },
     });
   },
-  addCalculatedChannel: (channel) => set((state) => ({ channels: [...state.channels, channel], selectedChannelIds: [...state.selectedChannelIds, channel.id], activeChannelId: channel.id })),
+  addCalculatedChannel: (channel) => set((state) => {
+    const existing = state.channels.find((item) => item.id === channel.id || (item.type === "calculated" && item.name.toLocaleLowerCase() === channel.name.toLocaleLowerCase()));
+    const channels = existing ? state.channels.map((item) => item.id === existing.id ? channel : item) : [...state.channels, channel];
+    const selectedChannelIds = Array.from(new Set([...state.selectedChannelIds.map((id) => id === existing?.id ? channel.id : id), channel.id]));
+    return { channels, selectedChannelIds, activeChannelId: channel.id };
+  }),
   setMode: (mode) => set({ mode }),
   setAxisMode: (axisMode) => set({ axisMode }),
   toggleChannel: (id) => set((state) => {

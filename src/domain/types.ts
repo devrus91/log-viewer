@@ -17,6 +17,16 @@ export interface ChannelMetadata {
   expression?: string;
 }
 
+export interface CalculatedChannelDefinition {
+  id: string;
+  name: string;
+  unit: string;
+  expression: string;
+  parameters: Record<string, number>;
+  color: string;
+  createdAt: number;
+}
+
 export interface LogMetadata {
   id: string;
   filename: string;

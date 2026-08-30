@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, Plus, X, XCircle } from "lucide-react";
 import { datasetStore } from "@/data/dataset-store";
-import { collectDependencies, parseFormula } from "@/domain/formula";
+import { collectDependencies, collectParameters, parseFormula } from "@/domain/formula";
 import { safeId } from "@/data/csv";
+import { saveCalculatedChannelDefinition } from "@/persistence/calculated-channels";
 import { calculateFormulaInWorker } from "@/workers/client";
 import { useWorkspaceStore } from "@/state/workspace-store";
 import type { ChannelMetadata } from "@/domain/types";
@@ -25,9 +26,15 @@ export function FormulaBuilder({ open, onClose }: FormulaBuilderProps) {
       const dependencies = Array.from(collectDependencies(ast));
       const missing = dependencies.find((dependency) => !channels.some((channel) => channel.name === dependency));
       if (missing) return { valid: false, message: `Unknown channel “${missing}”` };
+      if (parameters.some((parameter) => !parameter.name.trim())) return { valid: false, message: "Parameter names cannot be empty" };
+      if (parameters.some((parameter) => !Number.isFinite(parameter.value))) return { valid: false, message: "Parameter values must be numbers" };
+      const parameterNames = parameters.map((parameter) => parameter.name.trim()).filter(Boolean);
+      if (new Set(parameterNames).size !== parameterNames.length) return { valid: false, message: "Parameter names must be unique" };
+      const missingParameter = Array.from(collectParameters(ast)).find((parameter) => !parameterNames.includes(parameter));
+      if (missingParameter) return { valid: false, message: `Missing parameter “${missingParameter}”` };
       return { valid: true, message: `${dependencies.length} dependencies resolved` };
     } catch (error) { return { valid: false, message: error instanceof Error ? error.message : "Invalid formula" }; }
-  }, [expression, channels]);
+  }, [expression, channels, parameters]);
 
   if (!open) return null;
   const insert = (value: string) => setExpression((current) => `${current}${current && !current.endsWith(" ") ? " " : ""}${value}`);
@@ -37,10 +44,12 @@ export function FormulaBuilder({ open, onClose }: FormulaBuilderProps) {
     try {
       const namedColumns: Record<string, Float64Array> = {};
       channels.forEach((channel) => { const values = datasetStore.getColumn(channel.id); if (values) namedColumns[channel.name] = values; });
-      const values = await calculateFormulaInWorker(expression, namedColumns, Object.fromEntries(parameters.map((parameter) => [parameter.name, parameter.value])), metadata.rows);
+      const parameterValues = Object.fromEntries(parameters.map((parameter) => [parameter.name.trim(), parameter.value]));
+      const values = await calculateFormulaInWorker(expression, namedColumns, parameterValues, metadata.rows);
       let min = Infinity; let max = -Infinity; let sum = 0; let count = 0;
       for (const value of values) if (Number.isFinite(value)) { min = Math.min(min, value); max = Math.max(max, value); sum += value; count += 1; }
-      const channel: ChannelMetadata = { id: `calc-${safeId(name, channels.length)}`, name: name.trim(), originalName: name.trim(), unit: unit.trim() || "—", group: "Calculated", type: "calculated", min, max, average: count ? sum / count : Number.NaN, sampleCount: count, color: "#f472b6", expression };
+      const definition = saveCalculatedChannelDefinition({ id: `calc-${safeId(name, channels.length)}`, name: name.trim(), unit: unit.trim() || "—", expression: expression.trim(), parameters: parameterValues, color: "#f472b6", createdAt: Date.now() });
+      const channel: ChannelMetadata = { id: definition.id, name: definition.name, originalName: definition.name, unit: definition.unit, group: "Calculated", type: "calculated", min, max, average: count ? sum / count : Number.NaN, sampleCount: count, color: definition.color, expression: definition.expression };
       datasetStore.setColumn(channel, values);
       addCalculatedChannel(channel);
       onClose();
@@ -58,7 +67,7 @@ export function FormulaBuilder({ open, onClose }: FormulaBuilderProps) {
       {parameters.map((parameter, index) => <div className="parameter-row" key={index}><input value={parameter.name} onChange={(event) => setParameters((values) => values.map((value, item) => item === index ? { ...value, name: event.target.value.toUpperCase() } : value))} /><span>=</span><input type="number" value={parameter.value} onChange={(event) => setParameters((values) => values.map((value, item) => item === index ? { ...value, value: Number(event.target.value) } : value))} /><button onClick={() => setParameters((values) => values.filter((_, item) => item !== index))}><X size={14} /></button></div>)}
       <div className="formula-preview"><div><span>PREVIEW</span><small>First 4 original samples</small></div><table><thead><tr>{previewDependencies.slice(0, 2).map((dependency) => <th key={dependency}>{dependency}</th>)}<th>{name || "Calculated"}</th></tr></thead><tbody>{[0, 1, 2, 3].map((row) => <tr key={row}>{previewDependencies.slice(0, 2).map((dependency) => <td key={dependency}>{format(channels.find((channel) => channel.name === dependency)?.id, row)}</td>)}<td className="preview-pending">{validation.valid ? "ready" : "—"}</td></tr>)}</tbody></table></div>
     </section><aside className="formula-channels"><div className="section-kicker"><span>CHANNELS</span><span>CLICK TO INSERT</span></div>{channels.map((channel) => <button key={channel.id} onClick={() => insert(`[${channel.name}]`)}><span style={{ background: channel.color }} /> <b>{channel.name}</b><small>{channel.unit}</small></button>)}</aside></div>
-    <footer><span>Formulas run locally on original samples.</span><div><button className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" disabled={!validation.valid || saving} onClick={save}>{saving ? "Calculating…" : "Create channel"}</button></div></footer>
+    <footer><span>Saved locally and recalculated for compatible logs.</span><div><button className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" disabled={!validation.valid || saving} onClick={save}>{saving ? "Calculating…" : "Create channel"}</button></div></footer>
   </div></div>;
 }
 

@@ -45,7 +45,7 @@ export function OverviewNavigator() {
   const max = Math.max(1, metadata.rows - 1);
   return <div className="overview">
     <div className="overview-label"><span>OVERVIEW</span><span>{range[0].toLocaleString()} — {range[1].toLocaleString()} / {max.toLocaleString()} samples</span></div>
-    <div className="overview-track"><canvas ref={canvasRef} />
+    <div className="overview-track"><canvas ref={canvasRef} aria-hidden="true" />
       <input aria-label="Range start" type="range" min={0} max={max} value={range[0]} onChange={(event) => setRange([Math.min(Number(event.target.value), range[1] - 1), range[1]])} />
       <input aria-label="Range end" type="range" min={0} max={max} value={range[1]} onChange={(event) => setRange([range[0], Math.max(Number(event.target.value), range[0] + 1)])} />
     </div>

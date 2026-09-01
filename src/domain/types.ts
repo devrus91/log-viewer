@@ -1,5 +1,17 @@
 export type WorkspaceMode = "single" | "split" | "heatmap" | "raw";
 export type AxisMode = "shared" | "auto" | "independent";
+export type TooltipPosition = "auto" | "left" | "right";
+export type ChartTextSize = "compact" | "standard" | "large";
+export type SeriesDifferentiation = "color" | "patterns";
+export type ChartLineThickness = "thin" | "standard" | "bold";
+export type ChartContrast = "system" | "standard" | "high";
+export type CrosshairMode = "vertical" | "both" | "off";
+export type TooltipContents = "all" | "focused-pinned" | "focused";
+export type ValuePrecision = "auto" | "0" | "1" | "2" | "3" | "4";
+export type CursorSampling = "nearest" | "interpolated";
+export type GridVisibility = "off" | "subtle" | "standard" | "strong";
+export type WheelZoomMode = "always" | "modifier" | "disabled";
+export type DiagnosticMarkerMode = "all" | "warning-critical" | "critical" | "hidden";
 export type Aggregation = "average" | "min" | "max" | "median" | "count" | "sum";
 
 export interface ChannelMetadata {

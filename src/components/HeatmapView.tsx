@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { datasetStore } from "@/data/dataset-store";
 import { useWorkspaceStore } from "@/state/workspace-store";
@@ -8,12 +8,17 @@ import { calculateHeatmapInWorker } from "@/workers/client";
 import type { HeatmapCell, HeatmapResult } from "@/domain/types";
 
 export function HeatmapView() {
+  const figureId = useId();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [result, setResult] = useState<HeatmapResult | null>(null);
   const [hover, setHover] = useState<HeatmapCell | null>(null);
   const [loading, setLoading] = useState(false);
   const { channels, heatmap, setHeatmap } = useWorkspaceStore();
   const channelOptions = useMemo(() => channels.map((channel) => <option key={channel.id} value={channel.id}>{channel.name}</option>), [channels]);
+  const xChannel = channels.find((channel) => channel.id === heatmap.xChannelId);
+  const yChannel = channels.find((channel) => channel.id === heatmap.yChannelId);
+  const valueChannel = channels.find((channel) => channel.id === heatmap.valueChannelId);
+  const accessibleCells = useMemo(() => result ? [...result.cells].sort((a, b) => b.count - a.count).slice(0, 250) : [], [result]);
 
   useEffect(() => {
     const x = datasetStore.getColumn(heatmap.xChannelId);
@@ -47,7 +52,7 @@ export function HeatmapView() {
       context.fillStyle = cell ? heatColor((cell.value - result.valueMin) / (result.valueMax - result.valueMin || 1)) : "#101821";
       context.fillRect(pad.left + x * cellWidth + .5, pad.top + (result.yBins - y - 1) * cellHeight + .5, Math.max(1, cellWidth - 1), Math.max(1, cellHeight - 1));
     }
-    context.fillStyle = "#8290a3"; context.font = "10px IBM Plex Mono"; context.textAlign = "center";
+    context.fillStyle = "#a5b5c5"; context.font = "11px IBM Plex Mono"; context.textAlign = "center";
     for (let x = 0; x <= result.xBins; x += Math.ceil(result.xBins / 6)) context.fillText(format(result.xMin + (x / result.xBins) * (result.xMax - result.xMin)), pad.left + x * cellWidth, height - 18);
     context.save(); context.translate(14, height / 2); context.rotate(-Math.PI / 2); context.fillText(channels.find((channel) => channel.id === heatmap.yChannelId)?.name ?? "Y", 0, 0); context.restore();
     context.fillText(channels.find((channel) => channel.id === heatmap.xChannelId)?.name ?? "X", width / 2, height - 3);
@@ -64,9 +69,11 @@ export function HeatmapView() {
   return <div className="heatmap-layout">
     <section className="heatmap-panel">
       <div className="section-kicker"><span>HEATMAP MATRIX</span><span>{loading ? "CALCULATING…" : `${result?.cells.length ?? 0} populated cells`}</span></div>
-      <div className="heatmap-canvas-wrap"><canvas ref={canvasRef} onMouseMove={inspect} onMouseLeave={() => setHover(null)} />
+      <figure className="heatmap-canvas-wrap" aria-labelledby={`${figureId}-title`} aria-describedby={`${figureId}-summary`}><figcaption className="visually-hidden"><span id={`${figureId}-title`}>{valueChannel?.name ?? "Value"} heatmap</span><span id={`${figureId}-summary`}>Heatmap of {valueChannel?.name ?? "values"} by {xChannel?.name ?? "X"} and {yChannel?.name ?? "Y"}. {result?.cells.length ?? 0} populated cells. {result ? `Values range from ${format(result.valueMin)} to ${format(result.valueMax)}.` : "Values are calculating."}</span></figcaption><canvas ref={canvasRef} aria-hidden="true" onMouseMove={inspect} onMouseLeave={() => setHover(null)} />
+        {result && <div className="heatmap-scale" aria-hidden="true"><span>{format(result.valueMin)}</span><i /><span>{format(result.valueMax)} {valueChannel?.unit === "—" ? "" : valueChannel?.unit}</span></div>}
+        {result && <details className="chart-data-disclosure heatmap-data-disclosure"><summary>Accessible data</summary><div className="chart-data-panel"><p>{result.cells.length > accessibleCells.length ? `Showing the ${accessibleCells.length} most populated of ${result.cells.length} cells.` : `${result.cells.length} populated cells.`}</p><table><caption>{valueChannel?.name ?? "Heatmap"} cells</caption><thead><tr><th scope="col">{xChannel?.name ?? "X"}</th><th scope="col">{yChannel?.name ?? "Y"}</th><th scope="col">Value</th><th scope="col">Samples</th></tr></thead><tbody>{accessibleCells.map((cell) => <tr key={`${cell.x}:${cell.y}`}><td>{cellRange(result.xMin, result.xMax, result.xBins, cell.x)}</td><td>{cellRange(result.yMin, result.yMax, result.yBins, cell.y)}</td><td>{format(cell.value)} {valueChannel?.unit === "—" ? "" : valueChannel?.unit}</td><td>{cell.count}</td></tr>)}</tbody></table></div></details>}
         {hover && result && <div className="heat-tooltip"><b>{format(result.xMin + hover.x / result.xBins * (result.xMax - result.xMin))} – {format(result.xMin + (hover.x + 1) / result.xBins * (result.xMax - result.xMin))}</b><span>Value {format(hover.value)}</span><span>{hover.count} samples</span></div>}
-      </div>
+      </figure>
     </section>
     <aside className="heatmap-controls">
       <h3>Matrix setup</h3>
@@ -84,4 +91,5 @@ export function HeatmapView() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field"><span>{label}</span>{children}</label>; }
 function format(value: number): string { return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(2); }
+function cellRange(min: number, max: number, bins: number, index: number): string { const start = min + index / bins * (max - min); const end = min + (index + 1) / bins * (max - min); return `${format(start)}–${format(end)}`; }
 function heatColor(value: number): string { const hue = 210 - Math.max(0, Math.min(1, value)) * 190; return `hsl(${hue} 78% ${32 + value * 18}%)`; }

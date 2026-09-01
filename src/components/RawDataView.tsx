@@ -14,7 +14,7 @@ export function RawDataView() {
   const rows = Array.from({ length: Math.min(visibleCount, Math.max(0, (metadata?.rows ?? 0) - start)) }, (_, index) => start + index);
   return <div className="raw-wrap" onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}>
     <table className="raw-table"><thead><tr><th>#</th>{columns.map((id) => <th key={id}>{channels.find((channel) => channel.id === id)?.name}</th>)}</tr></thead>
-      <tbody style={{ transform: `translateY(${start * rowHeight}px)` }}>{rows.map((row) => <tr key={row} className={cursorIndex === row ? "active" : ""} onClick={() => setCursorIndex(row)}><td>{row.toLocaleString()}</td>{columns.map((id) => <td key={id}>{formatValue(datasetStore.getColumn(id)?.[row])}</td>)}</tr>)}</tbody>
+      <tbody style={{ transform: `translateY(${start * rowHeight}px)` }}>{rows.map((row) => <tr key={row} tabIndex={0} aria-selected={cursorIndex === row} className={cursorIndex === row ? "active" : ""} onClick={() => setCursorIndex(row)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setCursorIndex(row); } }}><td>{row.toLocaleString()}</td>{columns.map((id) => <td key={id}>{formatValue(datasetStore.getColumn(id)?.[row])}</td>)}</tr>)}</tbody>
     </table><div style={{ height: (metadata?.rows ?? 0) * rowHeight, pointerEvents: "none" }} />
   </div>;
 }

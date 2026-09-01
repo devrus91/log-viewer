@@ -10,6 +10,7 @@ import { loadCalculatedChannelDefinitions, saveCalculatedChannelDefinition } fro
 import { calculateFormulaInWorker } from "@/workers/client";
 import { useWorkspaceStore } from "@/state/workspace-store";
 import type { CalculatedChannelDefinition, ChannelMetadata } from "@/domain/types";
+import { AccessibleDialog } from "@/components/AccessibleDialog";
 
 interface FormulaBuilderProps { editingChannelId?: string | null; onClose: () => void; }
 
@@ -79,20 +80,20 @@ export function FormulaBuilder({ editingChannelId = null, onClose }: FormulaBuil
     finally { setSaving(false); }
   };
   const previewDependencies = validation.valid ? Array.from(collectDependencies(parseFormula(expression))) : [];
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div className="formula-modal" role="dialog" aria-modal="true" aria-label="Formula Builder">
-    <header><div><span className="eyebrow">CALCULATED CHANNEL</span><h2>{editingChannelId ? "Edit calculated channel" : "Formula Builder"}</h2><p>{editingChannelId ? "Update the selected signal and recalculate its dependent channels." : "Create a safe, reusable signal from original samples."}</p></div><button aria-label="Close formula builder" onClick={onClose}><X size={18} /></button></header>
+  return <AccessibleDialog className="formula-modal" ariaLabelledBy="formula-builder-title" onClose={onClose} closeOnBackdrop>
+    <header><div><span className="eyebrow">CALCULATED CHANNEL</span><h2 id="formula-builder-title">{editingChannelId ? "Edit calculated channel" : "Formula Builder"}</h2><p>{editingChannelId ? "Update the selected signal and recalculate its dependent channels." : "Create a safe, reusable signal from original samples."}</p></div><button aria-label="Close formula builder" onClick={onClose}><X size={18} /></button></header>
     <div className="formula-body"><section className="formula-editor">
       <div className="control-grid"><label className="field"><span>Channel name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label><label className="field"><span>Unit</span><input value={unit} onChange={(event) => setUnit(event.target.value)} /></label></div>
       <label className="field"><span>Expression</span><textarea value={expression} onChange={(event) => setExpression(event.target.value)} placeholder="[Boost Pressure Actual (bar)] - [Boost Pressure Target (bar)]" spellCheck={false} /></label>
       <div className="operator-palette">{["+", "−", "×", "/", "%", "^", "(", ")", ">", "<=", "AND", "OR", "abs()", "max()", "clamp()", "if()"].map((operator) => <button key={operator} onClick={() => insert(operator.replace("−", "-").replace("×", "*").replace("()", "("))}>{operator}</button>)}</div>
-      <div className={`validation ${validation.valid ? "valid" : "invalid"}`}>{validation.valid ? <CheckCircle2 size={16} /> : <XCircle size={16} />}<div><b>{validation.valid ? "Formula valid" : "Formula error"}</b><span>{validation.message}</span></div></div>
-      {saveError && <div className="formula-save-error"><XCircle size={15} />{saveError}</div>}
+      <div className={`validation ${validation.valid ? "valid" : "invalid"}`} role="status" aria-live="polite">{validation.valid ? <CheckCircle2 size={16} /> : <XCircle size={16} />}<div><b>{validation.valid ? "Formula valid" : "Formula error"}</b><span>{validation.message}</span></div></div>
+      {saveError && <div className="formula-save-error" role="alert"><XCircle size={15} />{saveError}</div>}
       <div className="parameters-head"><h3>Reusable parameters</h3><button onClick={() => setParameters((values) => [...values, { name: `PARAM_${values.length + 1}`, value: 1 }])}><Plus size={14} /> Add parameter</button></div>
-      {parameters.map((parameter, index) => <div className="parameter-row" key={index}><input value={parameter.name} onChange={(event) => setParameters((values) => values.map((value, item) => item === index ? { ...value, name: event.target.value.toUpperCase() } : value))} /><span>=</span><input type="number" value={parameter.value} onChange={(event) => setParameters((values) => values.map((value, item) => item === index ? { ...value, value: Number(event.target.value) } : value))} /><button onClick={() => setParameters((values) => values.filter((_, item) => item !== index))}><X size={14} /></button></div>)}
+      {parameters.map((parameter, index) => <div className="parameter-row" key={index}><input aria-label={`Parameter ${index + 1} name`} value={parameter.name} onChange={(event) => setParameters((values) => values.map((value, item) => item === index ? { ...value, name: event.target.value.toUpperCase() } : value))} /><span>=</span><input aria-label={`Parameter ${index + 1} value`} type="number" value={parameter.value} onChange={(event) => setParameters((values) => values.map((value, item) => item === index ? { ...value, value: Number(event.target.value) } : value))} /><button aria-label={`Remove parameter ${parameter.name || index + 1}`} onClick={() => setParameters((values) => values.filter((_, item) => item !== index))}><X size={14} /></button></div>)}
       <div className="formula-preview"><div><span>PREVIEW</span><small>First 4 original samples</small></div><table><thead><tr>{previewDependencies.slice(0, 2).map((dependency) => <th key={dependency}>{dependency}</th>)}<th>{name || "Calculated"}</th></tr></thead><tbody>{[0, 1, 2, 3].map((row) => <tr key={row}>{previewDependencies.slice(0, 2).map((dependency) => <td key={dependency}>{format(channels.find((channel) => channel.name === dependency)?.id, row)}</td>)}<td className="preview-pending">{validation.valid ? "ready" : "—"}</td></tr>)}</tbody></table></div>
     </section><aside className="formula-channels"><div className="section-kicker"><span>CHANNELS</span><span>CLICK TO INSERT</span></div>{channels.filter((channel) => channel.id !== editingChannelId).map((channel) => <button key={channel.id} onClick={() => insert(`[${channel.name}]`)}><span style={{ background: channel.color }} /> <b>{channel.name}</b><small>{channel.unit}</small></button>)}</aside></div>
     <footer><span>Saved locally and recalculated for compatible logs.</span><div><button className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" disabled={!validation.valid || saving} onClick={save}>{saving ? "Calculating…" : editingChannelId ? "Save changes" : "Create channel"}</button></div></footer>
-  </div></div>;
+  </AccessibleDialog>;
 }
 
 function format(id: string | undefined, row: number): string { const value = id ? datasetStore.getColumn(id)?.[row] : undefined; return value === undefined || !Number.isFinite(value) ? "—" : value.toFixed(2); }

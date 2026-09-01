@@ -1,6 +1,6 @@
 import type { ChannelMetadata, DatasetTransfer, LogMetadata } from "@/domain/types";
 
-const PALETTE = ["#66d9ef", "#a78bfa", "#fbbf24", "#34d399", "#fb7185", "#60a5fa", "#f472b6", "#f97316", "#2dd4bf", "#c084fc"];
+const PALETTE = ["#4DD7FF", "#B8FF3D", "#FF8A1F", "#A78BFA", "#FB7185", "#60A5FA", "#F472B6", "#34D399", "#FBBF24", "#C084FC"];
 
 export function detectDelimiter(text: string): string {
   const first = text.split(/\r?\n/).find((line) => line.trim() && !line.trimStart().startsWith("#")) ?? "";
@@ -145,6 +145,7 @@ export function parseCsv(text: string, filename = "log.csv", fileSize = text.len
   const time = columns[timeChannel.id];
   let minInterval = Infinity;
   let maxInterval = 0;
+  let maxIntervalIndex = 0;
   let intervalSum = 0;
   let intervalCount = 0;
   for (let index = 1; index < time.length; index += 1) {
@@ -152,12 +153,16 @@ export function parseCsv(text: string, filename = "log.csv", fileSize = text.len
     if (Number.isFinite(interval) && interval > 0) {
       minInterval = Math.min(minInterval, interval);
       maxInterval = Math.max(maxInterval, interval);
+      if (interval === maxInterval) {
+        maxIntervalIndex = index;
+      }
       intervalSum += interval;
       intervalCount += 1;
     }
   }
   const duration = time.length > 1 && Number.isFinite(time[time.length - 1] - time[0]) ? time[time.length - 1] - time[0] : 0;
   const averageInterval = intervalCount ? intervalSum / intervalCount : 0;
+  console.log('averageInterval ', averageInterval, 'maxInterval ', maxInterval, 'minInterval ', minInterval, 'maxIntervalIndex ', maxIntervalIndex)
   const metadata: LogMetadata = {
     id: `${filename}-${fileSize}-${dataRows.length}`,
     filename,
@@ -169,7 +174,7 @@ export function parseCsv(text: string, filename = "log.csv", fileSize = text.len
     averageSampleRate: averageInterval ? 1 / averageInterval : 0,
     minSampleInterval: minInterval === Infinity ? 0 : minInterval,
     maxSampleInterval: maxInterval,
-    irregularSampling: averageInterval > 0 && maxInterval - minInterval > averageInterval * 0.1,
+    irregularSampling: averageInterval > 0 && maxInterval - minInterval > averageInterval * 0.3,
   };
   return { metadata, channels, columns };
 }

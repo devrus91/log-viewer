@@ -9,6 +9,7 @@ describe("workspace diagnostic focus", () => {
       channels: [{ id: "existing" }, { id: "related" }] as ChannelMetadata[],
       selectedChannelIds: ["existing"],
       activeChannelId: "existing",
+      nearestChannelFocusEnabled: true,
       metadata: { rows: 100, averageSampleRate: 10 } as LogMetadata,
     });
   });
@@ -31,7 +32,17 @@ describe("workspace diagnostic focus", () => {
     useWorkspaceStore.getState().setNearestChannelFocusEnabled(false);
 
     expect(useWorkspaceStore.getState().nearestChannelFocusEnabled).toBe(false);
+    expect(useWorkspaceStore.getState().activeChannelId).toBeNull();
     expect(window.localStorage.getItem("automotive-log-viewer.nearest-channel-focus")).toBe("false");
+  });
+
+  it("toggles channel selection without focusing a row when focus is disabled", () => {
+    useWorkspaceStore.getState().setNearestChannelFocusEnabled(false);
+    useWorkspaceStore.getState().toggleChannel("related");
+
+    const state = useWorkspaceStore.getState();
+    expect(state.selectedChannelIds).toEqual(["existing", "related"]);
+    expect(state.activeChannelId).toBeNull();
   });
 
   it("hydrates valid chart preferences and ignores invalid values", () => {

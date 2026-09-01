@@ -137,7 +137,7 @@ export function TelemetryChart({ channelIds, height = 360, fillHeight = false, t
             if (event.peakIndex < start || event.peakIndex > end) continue;
             const x = plot.valToPos(event.peakTime, "x", true);
             const selected = event.id === selectedDiagnosticId;
-            context.strokeStyle = event.severity === "critical" ? "#fb5b68" : event.severity === "warning" ? "#f59e42" : "#4aa8ff";
+            context.strokeStyle = event.severity === "critical" ? "#fb5b68" : event.severity === "warning" ? "#FF8A1F" : "#4DD7FF";
             context.fillStyle = context.strokeStyle;
             context.globalAlpha = selected ? 1 : 0.72;
             context.lineWidth = (selected ? 2 : 1) * ratio;

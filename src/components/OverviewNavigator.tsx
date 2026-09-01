@@ -22,7 +22,7 @@ export function OverviewNavigator() {
     context.clearRect(0, 0, width, height);
     let min = Infinity; let max = -Infinity;
     for (const value of values) if (Number.isFinite(value)) { min = Math.min(min, value); max = Math.max(max, value); }
-    context.beginPath(); context.strokeStyle = "#43b7c8"; context.lineWidth = 1;
+    context.beginPath(); context.strokeStyle = "#4DD7FF"; context.lineWidth = 1;
     const step = Math.max(1, Math.floor(values.length / width));
     for (let index = 0; index < values.length; index += step) {
       const x = (index / Math.max(1, values.length - 1)) * width;
@@ -33,10 +33,10 @@ export function OverviewNavigator() {
     const startX = (range[0] / Math.max(1, values.length - 1)) * width;
     const endX = (range[1] / Math.max(1, values.length - 1)) * width;
     context.fillStyle = "rgba(67,183,200,.12)"; context.fillRect(startX, 0, Math.max(2, endX - startX), height);
-    context.strokeStyle = "#43b7c8"; context.strokeRect(startX + .5, .5, Math.max(2, endX - startX - 1), height - 1);
+    context.strokeStyle = "#B8FF3D"; context.strokeRect(startX + .5, .5, Math.max(2, endX - startX - 1), height - 1);
     for (const event of diagnostics?.events.slice(0, 200) ?? []) {
       const x = (event.peakIndex / Math.max(1, values.length - 1)) * width;
-      context.strokeStyle = event.severity === "critical" ? "#fb5b68" : event.severity === "warning" ? "#f59e42" : "#4aa8ff";
+      context.strokeStyle = event.severity === "critical" ? "#fb5b68" : event.severity === "warning" ? "#FF8A1F" : "#4DD7FF";
       context.globalAlpha = .85; context.beginPath(); context.moveTo(x, 0); context.lineTo(x, 9); context.stroke();
     }
     context.globalAlpha = 1;

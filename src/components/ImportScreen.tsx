@@ -1,13 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Activity, FileUp, LockKeyhole, Zap } from "lucide-react";
+import { Activity, FileUp, LockKeyhole, ShieldCheck, Sigma, Zap } from "lucide-react";
 import { calculateFormulaInWorker, parseCsvInWorker } from "@/workers/client";
 import { datasetStore } from "@/data/dataset-store";
 import { materializeCalculatedChannels } from "@/data/calculated-channels";
 import { loadCalculatedChannelDefinitions } from "@/persistence/calculated-channels";
 import { useWorkspaceStore } from "@/state/workspace-store";
 import { createDiagnosticRuleRepository, getActiveDiagnosticProfile } from "@/diagnostics/persistence/LocalStorageDiagnosticRuleRepository";
+import { WotLabBrand } from "@/components/WotLabBrand";
 
 export function ImportScreen() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -38,8 +39,8 @@ export function ImportScreen() {
     }
     void load(new File([lines.join("\n")], "sample_dyno_pull.csv", { type: "text/csv" }));
   };
-  return <main className="import-screen"><nav className="brand" aria-label="Automotive Log Viewer"><div className="brand-mark"><Activity size={20} /></div><div><b>AUTOMOTIVE</b><span>LOG VIEWER</span></div></nav><section className="import-card"><div className="import-kicker"><span>LOCAL TELEMETRY WORKSPACE</span><i /></div><h1>Every channel.<br /><em>One clear signal.</em></h1><p>Inspect ECU logs with synchronized plots, calculated channels and high-density heatmaps — without uploading a single byte.</p>
+  return <main className="import-screen"><nav className="brand" aria-label="WOT Lab home"><WotLabBrand /></nav><section className="import-card"><div className="import-kicker"><span>WORKSHOP-GRADE TELEMETRY</span><i /></div><h1>Every pull<br />tells a <em>story.</em></h1><p>Automotive log analysis, without the guesswork.</p><div className="import-capabilities" aria-label="Core capabilities"><span><Activity size={16} /><b>Synchronized</b><small>channels</small></span><span><Sigma size={16} /><b>Calculated</b><small>signals</small></span><span><ShieldCheck size={16} /><b>On-device</b><small>diagnostics</small></span></div>
     <label className={`dropzone ${dragging ? "dragging" : ""}`} aria-busy={loading} aria-describedby="csv-file-help" onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files[0]; if (file) void load(file); }}><div className="drop-icon"><FileUp size={26} /></div><b aria-live="polite">{loading ? "PARSING TELEMETRY…" : "CHOOSE OR DROP A CSV LOG"}</b><span id="csv-file-help">Comma, semicolon, and tab-delimited files are supported</span><input ref={inputRef} className="visually-hidden" type="file" accept=".csv,text/csv" disabled={loading} aria-label="Choose CSV telemetry log" onChange={(event) => { const file = event.target.files?.[0]; if (file) void load(file); }} /></label>
     {error && <div className="import-error" role="alert">{error}</div>}<button className="sample-button" onClick={sample} disabled={loading}><Zap size={14} /> Explore with a sample dyno pull</button>
-    <div className="import-trust"><span><LockKeyhole size={14} /> Local-first privacy</span><span>Typed arrays</span><span>Worker processing</span></div></section><div className="import-grid" /></main>;
+    <div className="import-trust"><span><LockKeyhole size={14} /> Your log stays local</span><span>Fast worker processing</span><span>Built for dense ECU data</span></div></section><div className="import-grid" /><div className="import-trace" aria-hidden="true"><svg viewBox="0 0 1440 220" preserveAspectRatio="none"><path d="M0 167h122l19-8 17 9 18-82 17 101 21-39 20 19h158l18-5 15 5 12-105 20 132 23-46 18 19h188l17-7 19 7 17-133 18 164 22-56 17 25h218l19-4 15 4 17-76 20 92 22-33 18 17h185" /><path d="M0 190h286l20-22 20 23 18-47 19 48h287l18-18 17 17 21-67 19 69h329l17-27 19 25 19-46 18 47h318" /></svg></div></main>;
 }

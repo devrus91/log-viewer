@@ -12,7 +12,7 @@ export function ChannelBrowser({ onOpenRules, onEditCalculated }: { onOpenRules?
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
-  const { channels, selectedChannelIds, activeChannelId, hiddenChannelIds, cursorIndex, valuePrecision, pinnedTooltipChannelIds, toggleChannel, toggleHidden, toggleTooltipPinnedChannel, sidebarTab, setSidebarTab, metadata, presets, applyPreset, diagnostics, diagnosticsEnabled, diagnosticFilter, setDiagnosticFilter, focusDiagnostic } = useWorkspaceStore();
+  const { channels, selectedChannelIds, activeChannelId, nearestChannelFocusEnabled, hiddenChannelIds, cursorIndex, valuePrecision, pinnedTooltipChannelIds, toggleChannel, toggleHidden, toggleTooltipPinnedChannel, sidebarTab, setSidebarTab, metadata, presets, applyPreset, diagnostics, diagnosticsEnabled, diagnosticFilter, setDiagnosticFilter, focusDiagnostic } = useWorkspaceStore();
   const groups = useMemo(() => {
     const result = new Map<string, typeof channels>();
     channels.filter((channel) => channel.name.toLowerCase().includes(query.toLowerCase())).forEach((channel) => {
@@ -35,7 +35,7 @@ export function ChannelBrowser({ onOpenRules, onEditCalculated }: { onOpenRules?
       <div className="channel-summary"><span>{channels.length} channels</span><span>{selectedChannelIds.length} active</span></div>
       <div className="channel-list">{Array.from(groups.entries()).map(([group, items]) => <div className="channel-group" key={group}>
         <button className="group-head" aria-expanded={!collapsed.includes(group)} onClick={() => setCollapsed((values) => values.includes(group) ? values.filter((value) => value !== group) : [...values, group])}><ChevronsUpDown size={12} /><span>{group}</span><b>{items.length}</b></button>
-        {!collapsed.includes(group) && items.map((channel) => { const selected = selectedChannelIds.includes(channel.id); const hidden = hiddenChannelIds.includes(channel.id); const pinned = pinnedTooltipChannelIds.includes(channel.id); return <div className={`channel-row ${selected ? "selected" : ""} ${activeChannelId === channel.id ? "active-channel" : ""}`} key={channel.id} draggable onDragStart={(event) => event.dataTransfer.setData("channel/id", channel.id)}>
+        {!collapsed.includes(group) && items.map((channel) => { const selected = selectedChannelIds.includes(channel.id); const hidden = hiddenChannelIds.includes(channel.id); const pinned = pinnedTooltipChannelIds.includes(channel.id); return <div className={`channel-row ${selected ? "selected" : ""} ${nearestChannelFocusEnabled && activeChannelId === channel.id ? "active-channel" : ""}`} key={channel.id} draggable onDragStart={(event) => event.dataTransfer.setData("channel/id", channel.id)}>
           <button className="channel-toggle" aria-label={`${selected ? "Remove" : "Add"} ${channel.name}`} aria-pressed={selected} onClick={() => toggleChannel(channel.id)}><span className="channel-toggle-indicator" style={{ borderColor: channel.color, background: selected ? channel.color : "transparent" }}>{selected && <Check size={10} />}</span></button>
           <button className="channel-main" aria-label={`${selected ? "Remove" : "Add"} ${channel.name}`} aria-pressed={selected} onClick={() => toggleChannel(channel.id)}><span className="channel-name">{channel.type === "calculated" && <FunctionSquare size={12} />}{channel.name}</span><small>{channel.unit}</small></button>
           <span className="channel-value">{current(channel.id)}</span>

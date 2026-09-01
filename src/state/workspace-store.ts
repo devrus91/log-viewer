@@ -184,7 +184,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   toggleChannel: (id) => set((state) => {
     const removing = state.selectedChannelIds.includes(id);
     const selectedChannelIds = removing ? state.selectedChannelIds.filter((value) => value !== id) : [...state.selectedChannelIds, id];
-    return { selectedChannelIds, activeChannelId: removing && state.activeChannelId === id ? selectedChannelIds[0] ?? null : removing ? state.activeChannelId : id, pinnedTooltipChannelIds: removing ? state.pinnedTooltipChannelIds.filter((value) => value !== id) : state.pinnedTooltipChannelIds };
+    const activeChannelId = !state.nearestChannelFocusEnabled ? null : removing && state.activeChannelId === id ? selectedChannelIds[0] ?? null : removing ? state.activeChannelId : id;
+    return { selectedChannelIds, activeChannelId, pinnedTooltipChannelIds: removing ? state.pinnedTooltipChannelIds.filter((value) => value !== id) : state.pinnedTooltipChannelIds };
   }),
   setActiveChannel: (activeChannelId) => set({ activeChannelId }),
   toggleHidden: (id) => set((state) => ({ hiddenChannelIds: state.hiddenChannelIds.includes(id) ? state.hiddenChannelIds.filter((value) => value !== id) : [...state.hiddenChannelIds, id] })),
@@ -224,7 +225,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
   setNearestChannelFocusEnabled: (nearestChannelFocusEnabled) => {
     if (typeof window !== "undefined") window.localStorage.setItem("automotive-log-viewer.nearest-channel-focus", String(nearestChannelFocusEnabled));
-    set({ nearestChannelFocusEnabled });
+    set((state) => ({ nearestChannelFocusEnabled, activeChannelId: nearestChannelFocusEnabled ? state.activeChannelId : null }));
   },
   setChartTextSize: (chartTextSize) => persist(set, "chart-text-size", chartTextSize, { chartTextSize }),
   setSeriesDifferentiation: (seriesDifferentiation) => persist(set, "series-differentiation", seriesDifferentiation, { seriesDifferentiation }),
@@ -238,11 +239,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setWheelZoomMode: (wheelZoomMode) => persist(set, "wheel-zoom-mode", wheelZoomMode, { wheelZoomMode }),
   setDiagnosticMarkerMode: (diagnosticMarkerMode) => persist(set, "diagnostic-marker-mode", diagnosticMarkerMode, { diagnosticMarkerMode }),
   toggleTooltipPinnedChannel: (id) => set((state) => ({ pinnedTooltipChannelIds: state.pinnedTooltipChannelIds.includes(id) ? state.pinnedTooltipChannelIds.filter((value) => value !== id) : [...state.pinnedTooltipChannelIds, id] })),
-  hydratePreferences: (storage) => set({
+  hydratePreferences: (storage) => set((state) => {
+    const nearestChannelFocusEnabled = storage.getItem("automotive-log-viewer.nearest-channel-focus") !== "false";
+    return {
     diagnosticsEnabled: storage.getItem("automotive-log-viewer.diagnostics-enabled") !== "false",
     valueDisplayMode: oneOf(storage.getItem("automotive-log-viewer.value-display-mode"), ["panel", "tooltip"], "panel"),
     tooltipPosition: oneOf(storage.getItem("automotive-log-viewer.tooltip-position"), ["auto", "left", "right"], "auto"),
-    nearestChannelFocusEnabled: storage.getItem("automotive-log-viewer.nearest-channel-focus") !== "false",
+    nearestChannelFocusEnabled,
+    activeChannelId: nearestChannelFocusEnabled ? state.activeChannelId : null,
     chartTextSize: oneOf(storage.getItem(preferenceKey("chart-text-size")), ["compact", "standard", "large"], "standard"),
     seriesDifferentiation: oneOf(storage.getItem(preferenceKey("series-differentiation")), ["color", "patterns"], "patterns"),
     chartLineThickness: oneOf(storage.getItem(preferenceKey("chart-line-thickness")), ["thin", "standard", "bold"], "standard"),
@@ -254,7 +258,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     gridVisibility: oneOf(storage.getItem(preferenceKey("grid-visibility")), ["off", "subtle", "standard", "strong"], "standard"),
     wheelZoomMode: oneOf(storage.getItem(preferenceKey("wheel-zoom-mode")), ["always", "modifier", "disabled"], "always"),
     diagnosticMarkerMode: oneOf(storage.getItem(preferenceKey("diagnostic-marker-mode")), ["all", "warning-critical", "critical", "hidden"], "all"),
-  }),
+  }; }),
   resetChartPreferences: () => {
     const defaults: Partial<WorkspaceState> = { valueDisplayMode: "panel", chartTextSize: "standard", seriesDifferentiation: "patterns", chartLineThickness: "standard", chartContrast: "system", crosshairMode: "vertical", tooltipContents: "all", valuePrecision: "auto", cursorSampling: "nearest", gridVisibility: "standard", wheelZoomMode: "always", diagnosticMarkerMode: "all", tooltipPosition: "auto", nearestChannelFocusEnabled: true };
     if (typeof window !== "undefined") {

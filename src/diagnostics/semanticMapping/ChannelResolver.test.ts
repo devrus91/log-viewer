@@ -35,4 +35,23 @@ describe("semantic channel resolver", () => {
     const corrected = resolveChannels(source, [{ canonical: "wheel.speed.rr", channelName: "Wheel Speed RL (km/h) (2)", updatedAt: 1 }]);
     expect(corrected.groups.get("wheel.speed")?.map((match) => match.canonical)).toEqual(["wheel.speed.rl", "wheel.speed.rr"]);
   });
+
+  it("maps additional ECU Connect channels for future rules", () => {
+    const source = channels([
+      "Battery voltage Actual (V)", "Flex Fuel Ethanol Content (%)", "Cylinder Fill (%)", "Cylinder Fill Limit (%)",
+      "Manifold Pressure Target (bar)", "Mass Airflow Target (Normalised) (kg/h)", "Output Shaft Speed (rpm)", "Converter Lockup Clutch (-)",
+    ].join(","));
+    const mapping = resolveChannels(source).mapping;
+
+    expect(Object.fromEntries(Array.from(mapping, ([canonical, match]) => [canonical, match.channelName]))).toMatchObject({
+      "electrical.batteryVoltage": "Battery voltage Actual (V)",
+      "fuel.ethanol": "Flex Fuel Ethanol Content (%)",
+      "engine.cylinderFill": "Cylinder Fill (%)",
+      "engine.cylinderFillLimit": "Cylinder Fill Limit (%)",
+      "boost.manifoldTarget": "Manifold Pressure Target (bar)",
+      "air.massFlowTarget": "Mass Airflow Target (Normalised) (kg/h)",
+      "transmission.outputShaftRpm": "Output Shaft Speed (rpm)",
+      "transmission.tccState": "Converter Lockup Clutch (-)",
+    });
+  });
 });

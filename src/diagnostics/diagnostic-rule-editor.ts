@@ -26,6 +26,31 @@ export function createCustomDiagnosticRule(id: string): DiagnosticRuleConfig {
   };
 }
 
+function replaceParameterReference(expression: string, currentName: string, nextName: string): string {
+  const escaped = currentName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return expression.replace(new RegExp(`\\b${escaped}\\b`, "g"), nextName);
+}
+
+export function renameDiagnosticRuleParameter(rule: DiagnosticRuleConfig, currentName: string, nextName: string): DiagnosticRuleConfig {
+  const parameters = Object.fromEntries(Object.entries(rule.parameters).map(([name, value]) => [name === currentName ? nextName : name, value]));
+  const renameCondition = (condition: DiagnosticRuleConfig["conditions"][number]) => ({
+    ...condition,
+    left: replaceParameterReference(condition.left, currentName, nextName),
+    right: replaceParameterReference(condition.right, currentName, nextName),
+  });
+  const detectorOptions = Object.fromEntries(Object.entries(rule.detectorOptions).map(([name, value]) => [
+    name,
+    typeof value === "string" && value === currentName ? nextName : Array.isArray(value) ? value.map((item) => item === currentName ? nextName : item) : value,
+  ]));
+  return {
+    ...rule,
+    parameters,
+    conditions: rule.conditions.map(renameCondition),
+    criticalCondition: rule.criticalCondition ? renameCondition(rule.criticalCondition) : undefined,
+    detectorOptions,
+  };
+}
+
 function validateWindowCalls(node: FormulaNode, parameters: Record<string, number>): string | null {
   if (node.type === "CallExpression") {
     if ((FORMULA_WINDOW_FUNCTIONS as readonly string[]).includes(node.name)) {

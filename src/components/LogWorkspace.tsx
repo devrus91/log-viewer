@@ -85,7 +85,7 @@ export function LogWorkspace() {
     </main><ChannelBrowser onOpenRules={() => setRulesOpen(true)} onEditCalculated={(channelId) => openFormula(channelId)} /></div>
     <DiagnosticDetails />
     <WorkspaceSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} onOpenDiagnosticRules={() => { setSettingsOpen(false); setRulesOpen(true); }} onOpenChannelMappings={() => { setSettingsOpen(false); setMappingOpen(true); }} />
-    <DiagnosticRulesManager open={rulesOpen} onClose={() => setRulesOpen(false)} onRerun={(profile) => void rerunDiagnostics(profile)} />
+    <DiagnosticRulesManager open={rulesOpen} onClose={() => setRulesOpen(false)} onRerun={(profile) => void rerunDiagnostics(profile)} onOpenChannelMappings={() => { setRulesOpen(false); setMappingOpen(true); }} />
     <ChannelMappingManager open={mappingOpen} onClose={() => setMappingOpen(false)} onApply={async (overrides) => { const profile = state.diagnosticProfiles.find((item) => item.id === state.activeDiagnosticProfileId) ?? state.diagnosticProfiles[0]; if (profile) await rerunDiagnostics(profile, overrides); }} />
     {formulaOpen && <FormulaBuilder editingChannelId={formulaTargetId} onClose={() => { setFormulaOpen(false); setFormulaTargetId(null); }} />}{toast && <div className="toast" role="status" aria-live="polite" aria-atomic="true"><Save size={15} />{toast}</div>}
   </div>;

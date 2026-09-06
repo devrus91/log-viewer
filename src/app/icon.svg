@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="wot-gradient" x1="13" y1="32" x2="51" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4dd7ff" />
+      <stop offset="0.52" stop-color="#b8ff3d" />
+      <stop offset="1" stop-color="#ff8a1f" />
+    </linearGradient>
+  </defs>
   <rect x="2" y="2" width="60" height="60" rx="14" fill="#071018" stroke="#294757" stroke-width="4" />
-  <path d="M13 17 22 47 32 28 42 47 51 17" fill="none" stroke="#4dd7ff" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter" />
+  <path d="M13 17 22 47 32 28 42 47 51 17" fill="none" stroke="url(#wot-gradient)" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter" />
 </svg>

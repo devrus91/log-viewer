@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import uPlot from "uplot";
 import { datasetStore } from "@/data/dataset-store";
 import { useWorkspaceStore } from "@/state/workspace-store";
-import { CHART_FONT_SIZES, CHART_LINE_WIDTHS, SERIES_DASH_PATTERNS, diagnosticMarkerVisible, filterTooltipRows, formatChartValue, gridStroke, interpolateValue } from "./chart-preferences";
+import { CHART_FONT_SIZES, CHART_LINE_WIDTHS, SERIES_DASH_PATTERNS, diagnosticMarkerVisible, filterTooltipRows, formatChartValue, gridStroke, interpolateValue, tooltipRowsPerColumn } from "./chart-preferences";
 import { resolveTooltipLeft } from "./tooltip-position";
 import { calculateWheelZoomRange } from "./wheel-zoom";
 
@@ -17,7 +17,7 @@ interface TelemetryChartProps {
 }
 
 interface ChartTooltipRow { id: string; name: string; unit: string; color: string; value: number | null; active: boolean; pinned: boolean; }
-interface ChartTooltipState { left: number; top: number; width: number; columns: number; xValue: number; rows: ChartTooltipRow[]; }
+interface ChartTooltipState { left: number; top: number; width: number; columns: number; rowsPerColumn: number; xValue: number; rows: ChartTooltipRow[]; }
 
 function buildIndices(start: number, end: number, series: Float64Array | undefined, limit = 4200): number[] {
   const length = end - start + 1;
@@ -173,13 +173,14 @@ export function TelemetryChart({ channelIds, height = 360, fillHeight = false, t
               });
               const rows = filterTooltipRows(allRows, tooltipContents, nearestChannelFocusEnabled);
               const columns = rows.length > 8 ? 2 : 1;
+              const rowsPerColumn = tooltipRowsPerColumn(rows.length, columns);
               const width = columns === 2 ? 430 : 240;
-              const estimatedHeight = 34 + Math.ceil(rows.length / columns) * 23;
+              const estimatedHeight = 34 + rowsPerColumn * 23;
               const cursorLeft = plot.over.offsetLeft + (plot.cursor.left ?? 0);
               const cursorTop = plot.over.offsetTop + (plot.cursor.top ?? 0);
               const left = resolveTooltipLeft({ cursorLeft, tooltipWidth: width, containerWidth: container.clientWidth, preference: tooltipPosition });
               const top = Math.min(Math.max(8, cursorTop - estimatedHeight / 2), Math.max(8, container.clientHeight - estimatedHeight - 8));
-              setChartTooltip({ left, top, width, columns, xValue: cursorSampling === "interpolated" ? cursorX : xValues[sourceIndex], rows });
+              setChartTooltip({ left, top, width, columns, rowsPerColumn, xValue: cursorSampling === "interpolated" ? cursorX : xValues[sourceIndex], rows });
             }
           }
         }],
@@ -245,6 +246,6 @@ export function TelemetryChart({ channelIds, height = 360, fillHeight = false, t
     <figcaption className="visually-hidden"><span id={`${figureId}-title`}>{title ?? "Telemetry chart"}</span><span id={`${figureId}-summary`}>Line chart with {accessibleRows.length} visible series. The displayed sample range is {rangeStart.toLocaleString()} through {rangeEnd.toLocaleString()}. Use Left and Right Arrow to move through samples, Home or End to jump within the range, and the accessible data disclosure for numeric values.</span></figcaption>
     {title && <div className="chart-watermark" aria-hidden="true">{title}</div>}<div ref={containerRef} className="telemetry-chart" aria-hidden="true" />
     <details className="chart-data-disclosure"><summary>Accessible data</summary><div className="chart-data-panel"><p>{xChannel?.name ?? "X axis"}: sample {accessibleIndex.toLocaleString()} within range {rangeStart.toLocaleString()}–{rangeEnd.toLocaleString()}</p><table><caption>Visible telemetry series</caption><thead><tr><th scope="col">Channel</th><th scope="col">Current</th><th scope="col">Minimum</th><th scope="col">Maximum</th></tr></thead><tbody>{accessibleRows.map((channel) => { const value = datasetStore.getColumn(channel.id)?.[accessibleIndex]; const unit = channel.unit === "—" ? "" : ` ${channel.unit}`; return <tr key={channel.id}><th scope="row">{channel.name}</th><td>{formatChartValue(value, valuePrecision, "Not available")}{unit}</td><td>{formatChartValue(channel.min, valuePrecision, "Not available")}{unit}</td><td>{formatChartValue(channel.max, valuePrecision, "Not available")}{unit}</td></tr>; })}</tbody></table></div></details>
-    {valueDisplayMode === "tooltip" && chartTooltip && <div className="chart-value-tooltip" aria-hidden="true" style={{ left: chartTooltip.left, top: chartTooltip.top, width: chartTooltip.width }}><header><span>CURSOR · {cursorSampling === "interpolated" ? "INTERPOLATED" : "SAMPLE"}</span><b>{formatChartValue(chartTooltip.xValue, valuePrecision)} <small>X</small></b></header><div className="chart-tooltip-values" style={{ gridTemplateColumns: `repeat(${chartTooltip.columns}, minmax(0, 1fr))` }}>{chartTooltip.rows.map((row) => <div className={`${row.active ? "active" : ""} ${row.pinned ? "pinned" : ""}`} key={row.id}><i style={{ background: row.color }} /><span title={row.name}>{row.name}</span><b>{formatChartValue(row.value, valuePrecision)} <small>{row.unit === "—" ? "" : row.unit}</small></b></div>)}</div></div>}
+    {valueDisplayMode === "tooltip" && chartTooltip && <div className="chart-value-tooltip" aria-hidden="true" style={{ left: chartTooltip.left, top: chartTooltip.top, width: chartTooltip.width }}><header><span>CURSOR · {cursorSampling === "interpolated" ? "INTERPOLATED" : "SAMPLE"}</span><b>{formatChartValue(chartTooltip.xValue, valuePrecision)} <small>X</small></b></header><div className="chart-tooltip-values" style={{ gridTemplateColumns: `repeat(${chartTooltip.columns}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${chartTooltip.rowsPerColumn}, var(--tooltip-row-height))`, gridAutoFlow: "column" }}>{chartTooltip.rows.map((row) => <div className={`${row.active ? "active" : ""} ${row.pinned ? "pinned" : ""}`} key={row.id}><i style={{ background: row.color }} /><span title={row.name}>{row.name}</span><b>{formatChartValue(row.value, valuePrecision)} <small>{row.unit === "—" ? "" : row.unit}</small></b></div>)}</div></div>}
   </figure>;
 }

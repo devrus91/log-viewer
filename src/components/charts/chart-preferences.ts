@@ -42,3 +42,7 @@ export function filterTooltipRows<T extends { active: boolean; pinned: boolean }
   const filtered = contents === "focused" ? rows.filter((row) => row.active) : rows.filter((row) => row.active || row.pinned);
   return filtered.length ? filtered : rows;
 }
+
+export function tooltipRowsPerColumn(rowCount: number, columnCount: number): number {
+  return Math.max(1, Math.ceil(rowCount / Math.max(1, columnCount)));
+}

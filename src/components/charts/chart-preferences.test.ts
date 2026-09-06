@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diagnosticMarkerVisible, filterTooltipRows, formatChartValue, interpolateValue } from "./chart-preferences";
+import { diagnosticMarkerVisible, filterTooltipRows, formatChartValue, interpolateValue, tooltipRowsPerColumn } from "./chart-preferences";
 
 describe("chart preferences", () => {
   it("formats values using automatic or fixed precision", () => {
@@ -24,5 +24,11 @@ describe("chart preferences", () => {
     expect(filterTooltipRows(rows, "focused-pinned", true).map((row) => row.id)).toEqual(["focused", "pinned"]);
     expect(filterTooltipRows(rows, "focused", true).map((row) => row.id)).toEqual(["focused"]);
     expect(filterTooltipRows(rows, "focused", false)).toEqual(rows);
+  });
+
+  it("fills tooltip columns top-to-bottom in channel order", () => {
+    expect(tooltipRowsPerColumn(9, 2)).toBe(5);
+    expect(tooltipRowsPerColumn(12, 2)).toBe(6);
+    expect(tooltipRowsPerColumn(8, 1)).toBe(8);
   });
 });

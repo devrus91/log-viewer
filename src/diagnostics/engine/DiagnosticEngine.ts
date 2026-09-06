@@ -1,12 +1,12 @@
 import { collectDependencies, createFormulaEvaluationContext, evaluateNode, parseFormula, type FormulaEvaluationContext, type FormulaNode } from "@/domain/formula";
-import type { ChannelMetadata, DiagnosticAnalysis, DiagnosticCondition, DiagnosticEvent, DiagnosticRuleConfig, DiagnosticSeverity, SemanticChannelMatch } from "@/domain/types";
+import type { ChannelMappingOverride, ChannelMetadata, DiagnosticAnalysis, DiagnosticCondition, DiagnosticEvent, DiagnosticRuleConfig, DiagnosticSeverity, SemanticChannelMatch } from "@/domain/types";
 import { resolveChannels } from "@/diagnostics/semanticMapping/ChannelResolver";
 import { detectPulls } from "@/diagnostics/pullDetection/PullDetector";
 import { correlateEvents } from "@/diagnostics/correlation/EventCorrelator";
 import type { DiagnosticDataset, EventDraft } from "./DiagnosticRule";
 import { defaultDiagnosticProfile } from "@/diagnostics/profiles/defaultProfile";
 
-interface AnalyzeInput { channels: ChannelMetadata[]; columns: Record<string, Float64Array>; profile?: DiagnosticDataset["profile"]; }
+interface AnalyzeInput { channels: ChannelMetadata[]; columns: Record<string, Float64Array>; profile?: DiagnosticDataset["profile"]; mappingOverrides?: ChannelMappingOverride[]; }
 interface CompiledCondition { left: FormulaNode; right: FormulaNode; operator: DiagnosticCondition["operator"]; }
 
 function canonicalColumns(dataset: DiagnosticDataset): Record<string, Float64Array> {
@@ -257,7 +257,7 @@ function runRule(rule: DiagnosticRuleConfig, dataset: DiagnosticDataset): Diagno
 
 export function analyzeDataset(input: AnalyzeInput): DiagnosticAnalysis {
   const profile = input.profile ?? defaultDiagnosticProfile;
-  const resolved = resolveChannels(input.channels);
+  const resolved = resolveChannels(input.channels, input.mappingOverrides);
   const timeMatch = resolved.mapping.get("time");
   const timeId = timeMatch?.channelId ?? input.channels.find((channel) => /time/i.test(channel.name))?.id ?? input.channels[0]?.id;
   const time = input.columns[timeId] ?? new Float64Array(0);

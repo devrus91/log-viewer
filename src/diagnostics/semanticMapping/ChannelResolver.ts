@@ -1,4 +1,4 @@
-import type { ChannelMetadata, SemanticChannelMatch } from "@/domain/types";
+import type { ChannelMappingOverride, ChannelMetadata, SemanticChannelMatch } from "@/domain/types";
 
 interface AliasDefinition { canonical: string; patterns: RegExp[]; }
 
@@ -11,7 +11,7 @@ const ALIASES: AliasDefinition[] = [
   { canonical: "boost.actual", patterns: [/boost pressure.*actual/i, /boost pressure pre throttle/i, /boost.*filtered/i, /^boost pressure/i, /charge pressure.*actual/i] },
   { canonical: "torque.request", patterns: [/torque request/i, /requested torque/i, /torque desired/i] },
   { canonical: "torque.actual", patterns: [/torque actual/i, /actual torque/i, /engine torque(?!.*request)/i] },
-  { canonical: "torque.limit", patterns: [/torque limit(?!ation state)/i] },
+  { canonical: "torque.limit", patterns: [/^torque desired max(?:\s|$|\()/i, /torque limit(?!ation state| reason)/i] },
   { canonical: "torque.state", patterns: [/torque limitation state/i, /torque intervention/i] },
   { canonical: "fuel.high.target", patterns: [/(?:high pressure|hpfp|rail).*fuel.*target/i, /fuel pressure.*target/i] },
   { canonical: "fuel.high.actual", patterns: [/(?:high pressure|hpfp|rail).*fuel.*actual/i, /fuel pressure actual/i, /^fuel pressure(?:\s|$|\()/i] },
@@ -33,6 +33,8 @@ const ALIASES: AliasDefinition[] = [
   { canonical: "ignition.total", patterns: [/ignition timing total/i, /^ignition timing(?!.*cyl)/i, /ignition retard(?!.*cyl)/i] },
 ];
 
+export const SEMANTIC_CHANNEL_IDS = ALIASES.map((definition) => definition.canonical);
+
 const GROUPS: Array<{ prefix: string; pattern: RegExp }> = [
   { prefix: "ignition.cylinder", pattern: /ignition.*(?:cylinder|cyl)\s*(\d+)/i },
   { prefix: "knock.cylinder", pattern: /knock.*(?:retard)?.*(?:cylinder|cyl)\s*(\d+)/i },
@@ -41,25 +43,105 @@ const GROUPS: Array<{ prefix: string; pattern: RegExp }> = [
 
 export interface ResolvedChannels { mapping: Map<string, SemanticChannelMatch>; groups: Map<string, SemanticChannelMatch[]>; matches: SemanticChannelMatch[]; }
 
-export function resolveChannels(channels: ChannelMetadata[]): ResolvedChannels {
+interface Candidate {
+  match: SemanticChannelMatch;
+  confidence: number;
+  specificity: number;
+}
+
+function normalizeName(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function specificity(pattern: RegExp, matchedText: string, channelName: string): number {
+  const coverage = matchedText.length / Math.max(1, channelName.length);
+  const anchored = pattern.source.startsWith("^") ? 0.15 : 0;
+  return coverage + anchored + Math.min(0.2, pattern.source.length / 250);
+}
+
+function betterCandidate(left: Candidate, right: Candidate): Candidate {
+  if (left.confidence !== right.confidence) return left.confidence > right.confidence ? left : right;
+  if (left.specificity !== right.specificity) return left.specificity > right.specificity ? left : right;
+  const byName = left.match.channelName.localeCompare(right.match.channelName);
+  if (byName !== 0) return byName < 0 ? left : right;
+  return left.match.channelId.localeCompare(right.match.channelId) <= 0 ? left : right;
+}
+
+function groupPrefix(canonical: string): string | undefined {
+  return GROUPS.find((definition) => canonical.startsWith(`${definition.prefix}.`))?.prefix;
+}
+
+function findOverrideChannel(channels: ChannelMetadata[], override: ChannelMappingOverride): ChannelMetadata | undefined {
+  const wanted = normalizeName(override.channelName);
+  return channels.find((channel) => normalizeName(channel.name) === wanted)
+    ?? channels.find((channel) => normalizeName(channel.originalName) === wanted);
+}
+
+export function resolveChannels(channels: ChannelMetadata[], overrides: ChannelMappingOverride[] = []): ResolvedChannels {
   const mapping = new Map<string, SemanticChannelMatch>();
   const groups = new Map<string, SemanticChannelMatch[]>();
-  const matches: SemanticChannelMatch[] = [];
+  const automatic = new Map<string, Candidate>();
+  const automaticGroups = new Map<string, Candidate>();
+  const manual = new Map<string, { match: SemanticChannelMatch; updatedAt: number }>();
+
+  for (const override of overrides) {
+    const channel = findOverrideChannel(channels, override);
+    if (!channel) continue;
+    const existing = manual.get(override.canonical);
+    if (existing && existing.updatedAt > override.updatedAt) continue;
+    manual.set(override.canonical, {
+      updatedAt: override.updatedAt,
+      match: { canonical: override.canonical, channelId: channel.id, channelName: channel.name, confidence: 1, confirmed: true, source: "manual" },
+    });
+  }
+  const manuallyAssignedChannels = new Set(Array.from(manual.values(), ({ match }) => match.channelId));
+
   for (const channel of channels) {
     for (const definition of ALIASES) {
-      const patternIndex = definition.patterns.findIndex((pattern) => pattern.test(channel.name));
-      if (patternIndex < 0 || mapping.has(definition.canonical)) continue;
-      const confidence = patternIndex === 0 ? 0.96 : Math.max(0.68, 0.9 - patternIndex * 0.06);
-      const match = { canonical: definition.canonical, channelId: channel.id, channelName: channel.name, confidence, confirmed: confidence >= 0.9 };
-      mapping.set(definition.canonical, match); matches.push(match);
+      if (manual.has(definition.canonical) || manuallyAssignedChannels.has(channel.id)) continue;
+      definition.patterns.forEach((pattern, patternIndex) => {
+        const patternMatch = channel.name.match(pattern);
+        if (!patternMatch) return;
+        const confidence = patternIndex === 0 ? 0.96 : Math.max(0.68, 0.9 - patternIndex * 0.06);
+        const candidate: Candidate = {
+          confidence,
+          specificity: specificity(pattern, patternMatch[0], channel.name),
+          match: { canonical: definition.canonical, channelId: channel.id, channelName: channel.name, confidence, confirmed: confidence >= 0.9, source: "automatic" },
+        };
+        const existing = automatic.get(definition.canonical);
+        automatic.set(definition.canonical, existing ? betterCandidate(existing, candidate) : candidate);
+      });
     }
     for (const definition of GROUPS) {
+      if (manuallyAssignedChannels.has(channel.id)) continue;
       const matchResult = channel.name.match(definition.pattern);
       if (!matchResult) continue;
       const canonical = `${definition.prefix}.${matchResult[1].toLowerCase().replace(/\s+/g, "-")}`;
-      const match = { canonical, channelId: channel.id, channelName: channel.name, confidence: 0.95, confirmed: true };
-      groups.set(definition.prefix, [...(groups.get(definition.prefix) ?? []), match]); matches.push(match);
+      if (manual.has(canonical)) continue;
+      const candidate: Candidate = {
+        confidence: 0.95,
+        specificity: specificity(definition.pattern, matchResult[0], channel.name),
+        match: { canonical, channelId: channel.id, channelName: channel.name, confidence: 0.95, confirmed: true, source: "automatic" },
+      };
+      const existing = automaticGroups.get(canonical);
+      automaticGroups.set(canonical, existing ? betterCandidate(existing, candidate) : candidate);
     }
   }
+
+  for (const [canonical, candidate] of automatic) mapping.set(canonical, candidate.match);
+  for (const [canonical, value] of manual) {
+    const prefix = groupPrefix(canonical);
+    if (!prefix) mapping.set(canonical, value.match);
+  }
+  for (const [canonical, candidate] of automaticGroups) {
+    const prefix = groupPrefix(canonical)!;
+    groups.set(prefix, [...(groups.get(prefix) ?? []), candidate.match]);
+  }
+  for (const [canonical, value] of manual) {
+    const prefix = groupPrefix(canonical);
+    if (prefix) groups.set(prefix, [...(groups.get(prefix) ?? []), value.match]);
+  }
+  for (const values of groups.values()) values.sort((left, right) => left.canonical.localeCompare(right.canonical));
+  const matches = [...mapping.values(), ...Array.from(groups.values()).flat()];
   return { mapping, groups, matches };
 }

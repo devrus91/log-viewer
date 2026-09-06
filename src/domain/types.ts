@@ -70,6 +70,13 @@ export interface SemanticChannelMatch {
   channelName: string;
   confidence: number;
   confirmed: boolean;
+  source?: "automatic" | "manual";
+}
+
+export interface ChannelMappingOverride {
+  canonical: string;
+  channelName: string;
+  updatedAt: number;
 }
 
 export interface DiagnosticEvent {

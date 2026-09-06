@@ -1,4 +1,4 @@
-import type { Aggregation, ChannelMetadata, DatasetTransfer, DiagnosticAnalysis, DiagnosticProfile, HeatmapFilter, HeatmapResult } from "@/domain/types";
+import type { Aggregation, ChannelMappingOverride, ChannelMetadata, DatasetTransfer, DiagnosticAnalysis, DiagnosticProfile, HeatmapFilter, HeatmapResult } from "@/domain/types";
 import { parseCsv } from "@/data/csv";
 import { evaluateFormula } from "@/domain/formula";
 import { buildHeatmap } from "@/analytics/heatmap";
@@ -35,10 +35,10 @@ function runWorker<T>(payload: Record<string, unknown>): Promise<T> {
   });
 }
 
-export async function parseCsvInWorker(file: File, profile?: DiagnosticProfile): Promise<DatasetTransfer> {
+export async function parseCsvInWorker(file: File, profile?: DiagnosticProfile, mappingOverrides: ChannelMappingOverride[] = []): Promise<DatasetTransfer> {
   const text = await file.text();
-  try { return await runWorker<DatasetTransfer>({ type: "parse", text, filename: file.name, fileSize: file.size, profile }); }
-  catch { const dataset = parseCsv(text, file.name, file.size); dataset.analysis = analyzeDataset({ channels: dataset.channels, columns: dataset.columns, profile }); return dataset; }
+  try { return await runWorker<DatasetTransfer>({ type: "parse", text, filename: file.name, fileSize: file.size, profile, mappingOverrides }); }
+  catch { const dataset = parseCsv(text, file.name, file.size); dataset.analysis = analyzeDataset({ channels: dataset.channels, columns: dataset.columns, profile, mappingOverrides }); return dataset; }
 }
 
 export async function calculateFormulaInWorker(expression: string, channels: Record<string, Float64Array>, parameters: Record<string, number>, rowCount: number): Promise<Float64Array> {
@@ -62,7 +62,7 @@ export async function calculateHeatmapInWorker(input: HeatmapWorkerInput): Promi
   catch { return buildHeatmap(input); }
 }
 
-export async function runDiagnosticsInWorker(channels: ChannelMetadata[], columns: Record<string, Float64Array>, profile: DiagnosticProfile): Promise<DiagnosticAnalysis> {
-  try { return await runWorker<DiagnosticAnalysis>({ type: "diagnostics", channels, columns, profile }); }
-  catch { return analyzeDataset({ channels, columns, profile }); }
+export async function runDiagnosticsInWorker(channels: ChannelMetadata[], columns: Record<string, Float64Array>, profile: DiagnosticProfile, mappingOverrides: ChannelMappingOverride[] = []): Promise<DiagnosticAnalysis> {
+  try { return await runWorker<DiagnosticAnalysis>({ type: "diagnostics", channels, columns, profile, mappingOverrides }); }
+  catch { return analyzeDataset({ channels, columns, profile, mappingOverrides }); }
 }

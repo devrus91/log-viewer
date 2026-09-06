@@ -191,6 +191,43 @@ figure { margin: 0; }
 .settings-tabs button.active { color: #dffbff; background: #13232c; box-shadow: inset 0 -2px var(--accent); }
 .settings-tab-content { flex: 1; min-height: 0; overflow: auto; }
 .settings-tab-content > section { min-height: 100%; padding: 18px; }
+
+/* Persisted semantic channel mapping */
+.mapping-modal { width: min(1180px, 96vw); height: min(850px, 94vh); background: #0c1219; border: 1px solid #344658; box-shadow: 0 28px 100px #000; display: flex; flex-direction: column; }
+.mapping-modal > header { min-height: 82px; padding: 16px 20px; border-bottom: 1px solid #26333f; display: flex; justify-content: space-between; }
+.mapping-modal > header h2 { margin: 4px 0 2px; font-size: 21px; }
+.mapping-modal > header p { margin: 0; color: #66788b; font-size: 10px; }
+.mapping-modal > header button { align-self: flex-start; border: 0; background: none; color: #718397; cursor: pointer; }
+.mapping-toolbar { min-height: 52px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #26333f; }
+.mapping-toolbar > label { height: 32px; min-width: 300px; flex: 1; display: flex; align-items: center; gap: 7px; padding: 0 9px; border: 1px solid #2b3b4a; background: #090f15; color: #637589; }
+.mapping-toolbar input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; }
+.mapping-toolbar > span { color: #66788b; font: 9px var(--font-geist-mono); white-space: nowrap; }
+.mapping-toolbar > span b { color: #b5c8d4; }
+.mapping-head { min-height: 31px; padding: 0 13px; display: grid; grid-template-columns: minmax(260px, 1.35fr) minmax(190px, .8fr) minmax(270px, 1fr); gap: 14px; align-items: center; border-bottom: 1px solid #26333f; color: #5e7185; font: 700 8px var(--font-geist-mono); letter-spacing: .1em; text-transform: uppercase; }
+.mapping-list { min-height: 0; flex: 1; overflow: auto; }
+.mapping-list > div:not(.mapping-empty) { min-height: 45px; padding: 6px 13px; display: grid; grid-template-columns: minmax(260px, 1.35fr) minmax(190px, .8fr) minmax(270px, 1fr); gap: 14px; align-items: center; border-bottom: 1px solid #18232d; }
+.mapping-list > div.manual { background: #102029; box-shadow: inset 2px 0 var(--accent); }
+.mapping-list > div > span { min-width: 0; display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.mapping-list > div > span i { width: 6px; height: 6px; border-radius: 50%; }
+.mapping-list > div > span b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.mapping-list > div > span small { color: #5c6e81; font: 8px var(--font-geist-mono); }
+.mapping-list code { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #72aebc; font: 9px var(--font-geist-mono); white-space: nowrap; }
+.mapping-list label { height: 31px; min-width: 0; padding-left: 8px; display: flex; align-items: center; gap: 6px; border: 1px solid #2a3a49; background: #090f15; color: #5c7184; }
+.mapping-list label:focus-within { border-color: #47818a; }
+.mapping-list label input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; font: 9px var(--font-geist-mono); }
+.mapping-list label button { width: 29px; align-self: stretch; border: 0; border-left: 1px solid #263744; background: transparent; color: #b46d7c; cursor: pointer; }
+.mapping-empty { height: 100%; display: grid; place-items: center; color: #596b7e; }
+.mapping-modal > footer { min-height: 58px; padding: 0 14px 0 18px; border-top: 1px solid #26333f; display: flex; align-items: center; justify-content: space-between; color: #718397; font-size: 9px; }
+.mapping-modal > footer > div { display: flex; gap: 7px; }
+.mapping-modal > footer > span { color: #e68191; }
+
+@media (max-width: 760px) {
+  .mapping-toolbar { align-items: stretch; flex-wrap: wrap; }
+  .mapping-toolbar > label { min-width: 100%; }
+  .mapping-head { display: none; }
+  .mapping-list > div:not(.mapping-empty) { grid-template-columns: 1fr; gap: 5px; padding: 10px 13px; }
+  .mapping-modal > footer { align-items: flex-start; gap: 8px; padding: 10px 14px; flex-direction: column; }
+}
 .settings-tabs {
   flex: 0 0 auto;
   width: 100%;

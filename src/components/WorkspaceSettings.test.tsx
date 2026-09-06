@@ -10,7 +10,7 @@ describe("WorkspaceSettings", () => {
   });
 
   it("organizes chart preferences into keyboard-accessible tabs", () => {
-    render(<WorkspaceSettings open onClose={vi.fn()} onOpenDiagnosticRules={vi.fn()} />);
+    render(<WorkspaceSettings open onClose={vi.fn()} onOpenDiagnosticRules={vi.fn()} onOpenChannelMappings={vi.fn()} />);
     const display = screen.getByRole("tab", { name: "Display" });
     const cursor = screen.getByRole("tab", { name: "Cursor & tooltip" });
     expect(display.getAttribute("aria-selected")).toBe("true");
@@ -21,7 +21,7 @@ describe("WorkspaceSettings", () => {
   });
 
   it("reveals tooltip-specific settings progressively", () => {
-    render(<WorkspaceSettings open onClose={vi.fn()} onOpenDiagnosticRules={vi.fn()} />);
+    render(<WorkspaceSettings open onClose={vi.fn()} onOpenDiagnosticRules={vi.fn()} onOpenChannelMappings={vi.fn()} />);
     fireEvent.click(screen.getByRole("tab", { name: "Cursor & tooltip" }));
     expect(screen.queryByText("Tooltip position")).toBeNull();
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
-import { Activity, Crosshair, MousePointer2, RotateCcw, Settings2, X } from "lucide-react";
+import { Activity, Crosshair, Link2, MousePointer2, RotateCcw, Settings2, X } from "lucide-react";
 import { useWorkspaceStore } from "@/state/workspace-store";
 import { AccessibleDialog } from "@/components/AccessibleDialog";
 
@@ -9,6 +9,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onOpenDiagnosticRules: () => void;
+  onOpenChannelMappings: () => void;
 }
 
 type SettingsTab = "display" | "cursor" | "interaction" | "diagnostics";
@@ -25,7 +26,7 @@ function SettingOptions<T extends string>({ legend, value, options, onChange, co
   return <fieldset className="settings-group"><legend>{legend}</legend><div className={`settings-options ${columns === 2 ? "two" : ""}`}>{options.map((option) => <button type="button" key={option.value} disabled={option.disabled} aria-pressed={value === option.value} className={value === option.value ? "active" : ""} onClick={() => onChange(option.value)}><b>{option.label}</b><span>{option.description}</span></button>)}</div></fieldset>;
 }
 
-export function WorkspaceSettings({ open, onClose, onOpenDiagnosticRules }: Props) {
+export function WorkspaceSettings({ open, onClose, onOpenDiagnosticRules, onOpenChannelMappings }: Props) {
   const [tab, setTab] = useState<SettingsTab>("display");
   const state = useWorkspaceStore();
   if (!open) return null;
@@ -77,7 +78,7 @@ export function WorkspaceSettings({ open, onClose, onOpenDiagnosticRules }: Prop
         <label className="settings-switch"><span><b>Automatic diagnostics</b><small>Show log health, event markers, and the Diagnostics tab.</small></span><input type="checkbox" checked={state.diagnosticsEnabled} onChange={(event) => state.setDiagnosticsEnabled(event.target.checked)} /></label>
         <SettingOptions legend="Diagnostic markers" value={state.diagnosticMarkerMode} onChange={state.setDiagnosticMarkerMode} options={[{ value: "all", label: "All", description: "Info, warning, critical" }, { value: "warning-critical", label: "Warnings + critical", description: "Hide informational events" }, { value: "critical", label: "Critical only", description: "Show highest severity" }, { value: "hidden", label: "Hidden", description: "Keep chart clear" }]} />
         <div className="settings-fact"><span>Visible parameters</span><b>{state.selectedChannelIds.length}</b></div>
-        <button className="button primary" onClick={onOpenDiagnosticRules}><Settings2 size={13} /> Configure diagnostic rules</button>
+        <div className="settings-actions"><button className="button primary" onClick={onOpenDiagnosticRules}><Settings2 size={13} /> Configure diagnostic rules</button><button className="button secondary" onClick={onOpenChannelMappings}><Link2 size={13} /> Map channels</button></div>
       </section>}
     </div>
     <footer><span>Preferences are saved in this browser.</span><button className="button primary" onClick={onClose}>Done</button></footer>

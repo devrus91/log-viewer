@@ -11,6 +11,7 @@ import { useWorkspaceStore } from "@/state/workspace-store";
 import { createDiagnosticRuleRepository, getActiveDiagnosticProfile } from "@/diagnostics/persistence/LocalStorageDiagnosticRuleRepository";
 import { WotLabBrand } from "@/components/WotLabBrand";
 import { useLogCatalogStore } from "@/state/log-catalog-store";
+import { loadChannelMappingOverrides } from "@/diagnostics/persistence/channel-mappings";
 
 const DIRECTORY_INPUT_ATTRIBUTES: InputHTMLAttributes<HTMLInputElement> & { webkitdirectory: string; directory: string } = { type: "file", multiple: true, webkitdirectory: "", directory: "" };
 
@@ -31,7 +32,7 @@ export function ImportScreen() {
     try {
       const repository = createDiagnosticRuleRepository();
       const profile = getActiveDiagnosticProfile(repository);
-      const dataset = await parseCsvInWorker(file, profile);
+      const dataset = await parseCsvInWorker(file, profile, loadChannelMappingOverrides());
       const restored = await materializeCalculatedChannels(loadCalculatedChannelDefinitions(), dataset.channels, dataset.columns, dataset.metadata.rows, calculateFormulaInWorker);
       datasetStore.load(dataset);
       restored.forEach(({ channel, values }) => datasetStore.setColumn(channel, values));

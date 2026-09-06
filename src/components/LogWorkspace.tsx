@@ -11,7 +11,7 @@ import { TelemetryChart } from "@/components/charts/TelemetryChart";
 import { datasetStore } from "@/data/dataset-store";
 import { loadPresets, savePresets } from "@/persistence/presets";
 import { useWorkspaceStore } from "@/state/workspace-store";
-import type { ViewPreset, WorkspaceMode } from "@/domain/types";
+import type { ChannelMappingOverride, ViewPreset, WorkspaceMode } from "@/domain/types";
 import type { DiagnosticProfile } from "@/domain/types";
 import { DiagnosticsSummary } from "@/components/diagnostics/DiagnosticsSummary";
 import { DiagnosticDetails } from "@/components/diagnostics/DiagnosticDetails";
@@ -21,6 +21,8 @@ import { runDiagnosticsInWorker } from "@/workers/client";
 import { WorkspaceSettings } from "@/components/WorkspaceSettings";
 import { formatChartValue } from "@/components/charts/chart-preferences";
 import { WotLabBrand } from "@/components/WotLabBrand";
+import { ChannelMappingManager } from "@/components/diagnostics/ChannelMappingManager";
+import { loadChannelMappingOverrides } from "@/diagnostics/persistence/channel-mappings";
 
 const MODES: Array<{ id: WorkspaceMode; label: string; icon: typeof Activity }> = [
   { id: "single", label: "Single", icon: Activity }, { id: "split", label: "Split", icon: Columns3 }, { id: "heatmap", label: "Heatmap", icon: Grid3X3 }, { id: "raw", label: "Raw", icon: Table2 },
@@ -33,6 +35,7 @@ export function LogWorkspace() {
   const [axisOpen, setAxisOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mappingOpen, setMappingOpen] = useState(false);
   const [toast, setToast] = useState("");
   const state = useWorkspaceStore();
   const setDiagnosticProfiles = useWorkspaceStore((store) => store.setDiagnosticProfiles);
@@ -43,7 +46,7 @@ export function LogWorkspace() {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") { event.preventDefault(); setFormulaTargetId(null); setFormulaOpen(true); }
-      if (event.key === "Escape") { setFormulaOpen(false); setFormulaTargetId(null); setSettingsOpen(false); setRulesOpen(false); }
+      if (event.key === "Escape") { setFormulaOpen(false); setFormulaTargetId(null); setSettingsOpen(false); setRulesOpen(false); setMappingOpen(false); }
       if (event.key === "0") state.resetZoom();
       if (["1", "2", "3", "4"].includes(event.key) && !/input|textarea|select/i.test((event.target as Element).tagName)) state.setMode(MODES[Number(event.key) - 1].id);
     };
@@ -59,9 +62,9 @@ export function LogWorkspace() {
     ids.forEach((id) => { if (!state.selectedChannelIds.includes(id)) state.toggleChannel(id); });
     setToast(`${name}: ${ids.length} channels matched`); setTimeout(() => setToast(""), 2200);
   };
-  const rerunDiagnostics = async (profile: DiagnosticProfile) => {
+  const rerunDiagnostics = async (profile: DiagnosticProfile, mappingOverrides: ChannelMappingOverride[] = loadChannelMappingOverrides()) => {
     state.setDiagnosticsRunning(true);
-    try { const analysis = await runDiagnosticsInWorker(state.channels, datasetStore.getAllColumns(), profile); state.setDiagnostics(analysis); setToast(`Diagnostics complete · ${analysis.events.length} events`); setTimeout(() => setToast(""), 2400); }
+    try { const analysis = await runDiagnosticsInWorker(state.channels, datasetStore.getAllColumns(), profile, mappingOverrides); state.setDiagnostics(analysis); setToast(`Diagnostics complete · ${analysis.events.length} events`); setTimeout(() => setToast(""), 2400); }
     catch { state.setDiagnosticsRunning(false); setToast("Diagnostics failed"); }
   };
   const openAnotherLog = () => { datasetStore.clear(); state.closeDataset(); };
@@ -81,8 +84,9 @@ export function LogWorkspace() {
       <div className="statusbar"><span><i className="status-dot" /> ORIGINAL DATA</span><span>Worker ready</span><span>Render: Canvas</span><span className="status-spacer" /> <button onClick={() => smartPreset("Boost & Torque Overview", [/engine speed|rpm/i, /boost.*target/i, /boost.*actual|boost pressure/i, /throttle/i, /torque request/i, /torque actual/i])}><Flame size={11} /> Boost & Torque</button><button onClick={() => smartPreset("Wheel Speed Overview", [/vehicle speed/i, /wheel speed.*fl/i, /wheel speed.*fr/i, /wheel speed.*rl/i, /wheel speed.*rr/i])}>Wheel speed</button><span><Info size={11} /> {state.metadata?.irregularSampling ? "Irregular sampling" : `${state.metadata?.averageSampleRate.toFixed(1)} Hz`}</span></div>
     </main><ChannelBrowser onOpenRules={() => setRulesOpen(true)} onEditCalculated={(channelId) => openFormula(channelId)} /></div>
     <DiagnosticDetails />
-    <WorkspaceSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} onOpenDiagnosticRules={() => { setSettingsOpen(false); setRulesOpen(true); }} />
+    <WorkspaceSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} onOpenDiagnosticRules={() => { setSettingsOpen(false); setRulesOpen(true); }} onOpenChannelMappings={() => { setSettingsOpen(false); setMappingOpen(true); }} />
     <DiagnosticRulesManager open={rulesOpen} onClose={() => setRulesOpen(false)} onRerun={(profile) => void rerunDiagnostics(profile)} />
+    <ChannelMappingManager open={mappingOpen} onClose={() => setMappingOpen(false)} onApply={async (overrides) => { const profile = state.diagnosticProfiles.find((item) => item.id === state.activeDiagnosticProfileId) ?? state.diagnosticProfiles[0]; if (profile) await rerunDiagnostics(profile, overrides); }} />
     {formulaOpen && <FormulaBuilder editingChannelId={formulaTargetId} onClose={() => { setFormulaOpen(false); setFormulaTargetId(null); }} />}{toast && <div className="toast" role="status" aria-live="polite" aria-atomic="true"><Save size={15} />{toast}</div>}
   </div>;
 }

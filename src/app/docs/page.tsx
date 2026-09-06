@@ -30,7 +30,7 @@ function CodeExample({ children }: { children: string }) {
 
 export default function DocumentationPage() {
   return <main className="docs-page" lang="ru">
-    <header className="docs-topbar"><Link href="/" aria-label="На главную WOT Lab"><WotLabBrand compact /></Link><div className="docs-topbar-actions"><span>LOG VIEWER MANUAL</span><Link href="/"><ArrowLeft size={15} /> Вернуться в приложение</Link></div></header>
+    <header className="docs-topbar"><Link href="/" aria-label="На главную WOT Lab"><WotLabBrand compact /></Link><div className="docs-topbar-actions"><span>LOG VIEWER MANUAL</span><nav className="docs-language-switcher" aria-label="Язык документации"><Link className="active" href="/docs" lang="ru" aria-current="page">RU</Link><Link href="/docs/en" lang="en">EN</Link></nav><Link className="docs-back-link" href="/"><ArrowLeft size={15} /> Вернуться в приложение</Link></div></header>
     <div className="docs-shell">
       <aside className="docs-nav"><div><BookOpen size={17} /><span><b>Документация</b><small>Формулы и диагностика</small></span></div><nav aria-label="Разделы документации">
         <a href="#quick-start">Быстрый старт</a>

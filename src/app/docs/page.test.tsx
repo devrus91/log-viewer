@@ -12,6 +12,8 @@ describe("DocumentationPage", () => {
     expect(screen.getByText("lag(expr, N)")).toBeTruthy();
     expect(screen.getByText("moving_avg(expr, N)")).toBeTruthy();
     expect(screen.getByText("[boost.actual]", { selector: "code" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "RU" }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("link", { name: "EN" }).getAttribute("href")).toBe("/docs/en");
     expect(screen.getAllByRole("link", { name: /Вернуться|К просмотру/ })).toHaveLength(2);
   });
 });

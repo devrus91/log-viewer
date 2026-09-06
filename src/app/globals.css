@@ -673,6 +673,10 @@ h1, h2, h3, h4, h5, h6 {
 .docs-topbar-actions > span { color: #60717f; font: 700 8px var(--font-geist-mono); letter-spacing: .16em; }
 .docs-topbar-actions > a, .docs-footer > a { height: 34px; padding: 0 11px; border: 1px solid #344451; color: #a7b6c1; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; font-size: 11px; }
 .docs-topbar-actions > a:hover, .docs-footer > a:hover { color: var(--accent); border-color: #607c3b; background: #172016; }
+.docs-language-switcher { height: 34px; padding: 3px; border: 1px solid #344451; background: #080d11; display: flex; align-items: stretch; }
+.docs-language-switcher a { min-width: 38px; padding: 0 9px; color: #748590; display: grid; place-items: center; text-decoration: none; font: 700 9px var(--font-geist-mono); letter-spacing: .08em; }
+.docs-language-switcher a:hover { color: #dce6ea; background: #121b21; }
+.docs-language-switcher a.active { color: #10150a; background: var(--accent); }
 .docs-shell { width: min(1380px, 100%); min-height: calc(100vh - 66px); margin: 0 auto; display: grid; grid-template-columns: 248px minmax(0, 1fr); }
 .docs-nav { min-height: calc(100vh - 66px); position: sticky; top: 66px; align-self: start; padding: 28px 20px; border-right: 1px solid #26313b; background: #0c1117; }
 .docs-nav > div { padding: 0 9px 21px; border-bottom: 1px solid #202a33; display: flex; align-items: center; gap: 10px; color: var(--accent); }
@@ -752,7 +756,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 @media (max-width: 620px) {
   .import-docs-link { top: 24px; right: 18px; width: 36px; padding: 0; justify-content: center; font-size: 0; }
-  .docs-topbar { height: 58px; padding: 0 16px; }.docs-topbar-actions > span { display: none; }.docs-topbar-actions > a { width: 34px; padding: 0; justify-content: center; font-size: 0; }
+  .docs-topbar { height: 58px; padding: 0 16px; }.docs-topbar-actions { gap: 8px; }.docs-topbar-actions > span { display: none; }.docs-topbar-actions > .docs-back-link { width: 34px; padding: 0; justify-content: center; font-size: 0; }.docs-language-switcher { height: 32px; }.docs-language-switcher a { min-width: 32px; padding: 0 6px; }
   .docs-content { padding-inline: 18px; }.docs-hero { min-height: 390px; padding: 52px 0 44px; }.docs-hero > p { font-size: 14px; }
   .docs-hero-cards, .docs-steps, .docs-definition-grid, .docs-function-grid, .docs-recipes { grid-template-columns: 1fr; }
   .docs-function-grid > div:nth-child(odd) { border-right: 0; }

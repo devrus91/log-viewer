@@ -27,7 +27,7 @@ export function ChannelMappingManager({ open, onClose, onApply }: Props) {
 }
 
 function OpenChannelMappingManager({ onClose, onApply }: Omit<Props, "open">) {
-  const channels = useWorkspaceStore((state) => state.channels).filter((channel) => channel.type !== "calculated");
+  const channels = useWorkspaceStore((state) => state.channels);
   const [query, setQuery] = useState("");
   const [saved] = useState<ChannelMappingOverride[]>(() => loadChannelMappingOverrides());
   const [drafts, setDrafts] = useState<Record<string, string>>(() => {
@@ -86,13 +86,13 @@ function OpenChannelMappingManager({ onClose, onApply }: Omit<Props, "open">) {
   };
 
   return <AccessibleDialog className="mapping-modal" ariaLabelledBy="channel-mapping-title" onClose={onClose}>
-    <header><div><span className="eyebrow">SEMANTIC CHANNELS</span><h2 id="channel-mapping-title">Channel Mapping</h2><p>Manual mappings override automatic detection and are reused for matching channel names in future logs.</p></div><button aria-label="Close channel mapping" onClick={onClose}><X size={18} /></button></header>
-    <div className="mapping-toolbar"><label><Search size={14} /><input aria-label="Search channels and mappings" placeholder="Search raw or canonical channel" value={query} onChange={(event) => setQuery(event.target.value)} /></label><span><b>{automatic.matches.length}</b> automatic · <b>{overrideCount}</b> manual{historicalCount ? ` · ${historicalCount} saved for other logs` : ""}</span><button className="button secondary" type="button" disabled={!overrideCount} onClick={() => { setDrafts({}); setError(""); }}><RotateCcw size={13} /> Clear current overrides</button></div>
+    <header><div><span className="eyebrow">SEMANTIC CHANNELS</span><h2 id="channel-mapping-title">Channel Mapping</h2><p>Map source or calculated channels to diagnostic names. Manual mappings are reused in future logs.</p></div><button aria-label="Close channel mapping" onClick={onClose}><X size={18} /></button></header>
+    <div className="mapping-toolbar"><label><Search size={14} /><input aria-label="Search channels and mappings" placeholder="Search source, calculated, or canonical channel" value={query} onChange={(event) => setQuery(event.target.value)} /></label><span><b>{automatic.matches.length}</b> automatic · <b>{overrideCount}</b> manual{historicalCount ? ` · ${historicalCount} saved for other logs` : ""}</span><button className="button secondary" type="button" disabled={!overrideCount} onClick={() => { setDrafts({}); setError(""); }}><RotateCcw size={13} /> Clear current overrides</button></div>
     <div className="mapping-head"><span>Source channel</span><span>Automatic result</span><span>Manual override</span></div>
     <div className="mapping-list">{visibleChannels.map((channel) => {
       const auto = automaticByChannel.get(channel.id) ?? [];
       const manual = drafts[channel.id] ?? "";
-      return <div className={manual ? "manual" : ""} key={channel.id}><span><i style={{ background: channel.color }} /><b title={channel.name}>{channel.name}</b><small>{channel.unit}</small></span><code>{auto.length ? auto.join(", ") : "—"}</code><label><Link2 size={12} /><input aria-label={`Manual canonical mapping for ${channel.name}`} list="semantic-channel-options" placeholder={auto.length ? "Use automatic" : "canonical.name"} value={manual} onChange={(event) => { setDrafts((current) => ({ ...current, [channel.id]: event.target.value })); setError(""); }} />{manual && <button type="button" aria-label={`Clear manual mapping for ${channel.name}`} onClick={() => setDrafts((current) => ({ ...current, [channel.id]: "" }))}><X size={12} /></button>}</label></div>;
+      return <div className={`${manual ? "manual" : ""} ${channel.type === "calculated" ? "calculated" : ""}`} key={channel.id}><span><i style={{ background: channel.color }} /><b title={channel.name}>{channel.name}</b><small>{channel.unit}{channel.type === "calculated" ? " · CALCULATED" : ""}</small></span><code>{auto.length ? auto.join(", ") : "—"}</code><label><Link2 size={12} /><input aria-label={`Manual canonical mapping for ${channel.name}`} list="semantic-channel-options" placeholder={auto.length ? "Use automatic" : "canonical.name"} value={manual} onChange={(event) => { setDrafts((current) => ({ ...current, [channel.id]: event.target.value })); setError(""); }} />{manual && <button type="button" aria-label={`Clear manual mapping for ${channel.name}`} onClick={() => setDrafts((current) => ({ ...current, [channel.id]: "" }))}><X size={12} /></button>}</label></div>;
     })}{visibleChannels.length === 0 && <div className="mapping-empty">No matching channels</div>}</div>
     <datalist id="semantic-channel-options">{knownCanonicals.map((canonical) => <option value={canonical} key={canonical} />)}</datalist>
     <footer><span>{error || "An empty override keeps the automatic result."}</span><div><button className="button secondary" onClick={onClose}>Cancel</button><button className="button primary" disabled={applying} onClick={() => void save()}>{applying ? "Applying…" : "Save and re-run diagnostics"}</button></div></footer>

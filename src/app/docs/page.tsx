@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, BookOpen, Braces, Gauge, Sigma } from "lucide-react";
 import { WotLabBrand } from "@/components/WotLabBrand";
+import type { DocumentedRuleGroup } from "@/components/docs/DiagnosticRuleCatalog";
 
 export const metadata: Metadata = {
   title: "Документация — WOT Lab",
@@ -24,6 +25,55 @@ const SCALAR_FUNCTIONS = [
   ["ceil(x)", "округление вверх"], ["if(condition, yes, no)", "выбор по условию"],
 ];
 
+export const BUILT_IN_RULES: DocumentedRuleGroup[] = [
+  { category: "Наддув", rules: [
+    { name: "Boost Under Target", severity: "warning", severityLabel: "Предупреждение", description: "Фактический наддув ниже цели более чем на 0,3 при дросселе выше 80% и оборотах выше 2500 не менее 250 мс. Разница более 0,55 считается критической." },
+    { name: "Boost Over Target", severity: "warning", severityLabel: "Предупреждение", description: "Фактический наддув выше цели более чем на 0,25 при дросселе выше 80% и оборотах выше 2500 не менее 120 мс. Превышение более 0,5 считается критическим." },
+    { name: "Unexpected Boost Drop", severity: "warning", severityLabel: "Предупреждение", description: "Наддув падает более чем на 0,45 за 250 мс при дросселе выше 85% и оборотах выше 2500. Минимальная длительность — 40 мс." },
+  ] },
+  { category: "Крутящий момент", rules: [
+    { name: "Unexpected Throttle Closure", severity: "warning", severityLabel: "Предупреждение", description: "Педаль нажата более чем на 90%, но дроссель открыт менее чем на 70% дольше 50 мс. Открытие ниже 40% считается критическим." },
+    { name: "Torque Intervention", severity: "warning", severityLabel: "Предупреждение", description: "Фактический момент ниже запрошенного более чем на 120 Н·м при дросселе выше 70% не менее 100 мс." },
+  ] },
+  { category: "Зажигание", rules: [
+    { name: "Ignition Retard", severity: "warning", severityLabel: "Предупреждение", description: "Угол по цилиндру, либо общий угол при отсутствии цилиндровых каналов, ниже −3° не менее 50 мс. Ниже −6° — критическое событие." },
+    { name: "Cylinder Ignition Deviation", severity: "warning", severityLabel: "Предупреждение", description: "Угол одного цилиндра отличается от середины значений остальных более чем на 5° не менее 50 мс. Более 8° — критическое событие; нужны данные минимум трёх цилиндров." },
+  ] },
+  { category: "Детонация", rules: [
+    { name: "Knock Retard", severity: "warning", severityLabel: "Предупреждение", description: "Коррекция по детонации на любом цилиндре ниже −3° не менее 40 мс. Ниже −6° — критическое событие." },
+    { name: "Repeated Cylinder Knock", severity: "warning", severityLabel: "Предупреждение", description: "На одном цилиндре найдено не менее трёх эпизодов коррекции ниже −2,5° за 5 секунд. Значение ниже −6° делает событие критическим." },
+  ] },
+  { category: "Топливная система", rules: [
+    { name: "Fuel Pressure Below Target", severity: "critical", severityLabel: "Критическое", description: "Давление топлива ниже 90% от цели при дросселе выше 80% и оборотах выше 3000 не менее 200 мс. Правило сразу создаёт критическое событие." },
+    { name: "Fuel Pressure Sudden Drop", severity: "critical", severityLabel: "Критическое", description: "Скорость падения давления ниже −500 единиц/с при дросселе выше 80% и оборотах выше 2500 не менее 30 мс." },
+    { name: "Lambda Lean vs Target", severity: "critical", severityLabel: "Критическое", description: "Фактическая лямбда выше цели более чем на 0,08 при дросселе выше 80% и оборотах выше 2500 не менее 120 мс." },
+    { name: "Injector Duty Saturation", severity: "warning", severityLabel: "Предупреждение", description: "Загрузка форсунок выше 95% не менее 200 мс. Значение выше 99,5% считается критическим." },
+    { name: "Excessive Fuel Trims", severity: "warning", severityLabel: "Предупреждение", description: "Кратковременная коррекция превышает ±15% или долговременная превышает ±12% не менее 500 мс." },
+  ] },
+  { category: "Температура", rules: [
+    { name: "High Intake Air Temperature", severity: "warning", severityLabel: "Предупреждение", description: "Температура воздуха на впуске выше 60 °C не менее секунды. Выше 80 °C — критическое событие." },
+    { name: "Engine Overheating", severity: "warning", severityLabel: "Предупреждение", description: "Температура охлаждающей жидкости выше 110 °C не менее 500 мс. Выше 120 °C — критическое событие." },
+  ] },
+  { category: "Двигатель", rules: [
+    { name: "Cam Target Deviation", severity: "warning", severityLabel: "Предупреждение", description: "Впускной или выпускной распредвал отличается от заданного положения более чем на 10° не менее 200 мс." },
+    { name: "Rev Limiter Intervention", severity: "info", severityLabel: "Информация", description: "Обороты выше 6800 при нажатии педали более чем на 80% не менее 50 мс. Может отражать штатную работу ограничителя." },
+    { name: "WOT Pull", severity: "info", severityLabel: "Информация", description: "Определяет область полного газа: дроссель не ниже 90%, длительность не менее секунды и рост оборотов минимум на 500 об/мин." },
+  ] },
+  { category: "Коробка передач", rules: [
+    { name: "TCC / Transmission Slip", severity: "warning", severityLabel: "Предупреждение", description: "Модуль проскальзывания выше 250 об/мин на третьей или более высокой передаче при дросселе выше 30% не менее 300 мс." },
+    { name: "Gear Shift", severity: "info", severityLabel: "Информация", description: "Регистрирует изменение номера передачи внутри WOT-области." },
+  ] },
+  { category: "Скорости колёс", rules: [
+    { name: "Wheel Speed Mismatch", severity: "warning", severityLabel: "Предупреждение", description: "Разброс скоростей колёс выше 8 км/ч при скорости автомобиля не ниже 20 км/ч не менее 100 мс. Выше 20 км/ч — критическое событие." },
+    { name: "Wheel Speed Spike", severity: "warning", severityLabel: "Предупреждение", description: "Скорость одного колеса отличается от остальных более чем на 15 км/ч не менее 20 мс. Более 30 км/ч — критическое событие." },
+  ] },
+  { category: "Датчики и данные", rules: [
+    { name: "Sensor / Data Dropout", severity: "warning", severityLabel: "Предупреждение", description: "Находит пропуск, неверное значение или сброс в ноль длительностью минимум два отсчёта между нормальными значениями." },
+    { name: "Sensor Impossible Rate of Change", severity: "warning", severityLabel: "Предупреждение", description: "Находит слишком быстрый скачок: скорость колеса выше 1800 единиц/с, наддув выше 15 единиц/с или температура выше 80 единиц/с." },
+    { name: "Stuck Sensor", severity: "info", severityLabel: "Информация", description: "Сигнал почти не меняется более 2 секунд, хотя обороты за это время изменились минимум на 500 об/мин." },
+  ] },
+];
+
 function CodeExample({ children }: { children: string }) {
   return <pre className="docs-code"><code>{children}</code></pre>;
 }
@@ -33,7 +83,7 @@ export default function DocumentationPage() {
     <header className="docs-topbar"><Link href="/" aria-label="На главную WOT Lab"><WotLabBrand compact /></Link><div className="docs-topbar-actions"><span>РУКОВОДСТВО ПО ПРОСМОТРУ ЛОГОВ</span><nav className="docs-language-switcher" aria-label="Язык документации"><Link className="active" href="/docs" lang="ru" aria-current="page">RU</Link><Link href="/docs/en" lang="en">EN</Link></nav><Link className="docs-back-link" href="/"><ArrowLeft size={15} /> Вернуться в приложение</Link></div></header>
     <div className="docs-shell">
       <aside className="docs-nav"><div><BookOpen size={17} /><span><b>Документация</b><small>Формулы и диагностика</small></span></div><nav aria-label="Разделы документации">
-        <a href="#quick-start">Быстрый старт</a><a href="#formula-language">Язык выражений</a><a href="#calculated-channels">Вычисляемые каналы</a><a href="#diagnostic-rules">Правила анализа</a><a href="#window-functions">Оконные функции</a><a href="#channel-mapping">Сопоставление каналов</a><a href="#recipes">Готовые примеры</a>
+        <a href="#quick-start">Быстрый старт</a><a href="#formula-language">Язык выражений</a><a href="#calculated-channels">Вычисляемые каналы</a><a href="#diagnostic-rules">Создание правил</a><Link href="/docs/rules">Встроенные правила</Link><a href="#window-functions">Оконные функции</a><a href="#channel-mapping">Сопоставление каналов</a><a href="#recipes">Готовые примеры</a>
       </nav><p>Все вычисления выполняются на вашем устройстве. Данные лога не передаются на сервер.</p></aside>
 
       <article className="docs-content">
@@ -49,7 +99,7 @@ export default function DocumentationPage() {
 
         <section id="window-functions" className="docs-section"><div className="docs-heading"><span>05</span><div><h2>Оконные функции</h2><p>Общий набор функций для вычисляемых каналов и правил анализа.</p></div></div><div className="docs-callout"><Braces size={18} /><div><b>Где их можно использовать</b><p>Все перечисленные ниже функции работают как в выражении вычисляемого канала, так и в левой или правой части условия диагностического правила.</p></div></div><div className="docs-warning"><b>N — количество отсчётов, а не время.</b><span>При частоте 50 Гц окно из 10 отсчётов примерно равно 200 мс. Если записи сделаны с разными промежутками, фактическая длительность окна меняется. N должно быть целым числом от 1 до 10 000; вместо числа можно указать параметр.</span></div><div className="docs-window-table"><div className="head"><span>Функция</span><span>Результат</span><span>Начало лога</span></div>{WINDOW_FUNCTIONS.map((item) => <div key={item.name}><code>{item.name}</code><span>{item.result}</span><small>{item.edge}</small></div>)}</div><h3>В вычисляемом канале</h3><CodeExample>{`// Сглаженное отклонение наддува за последние 10 отсчётов\nmoving_avg([Boost Target] - [Boost Actual], 10)\n\n// Изменение оборотов относительно 5 отсчётов назад\ndelta([Engine Speed (rpm)], 5)`}</CodeExample><h3>В условии правила</h3><CodeExample>{`Левая часть:  moving_avg([boost.target] - [boost.actual], WINDOW)\nЗнак:         >\nПравая часть: MAX_ERROR\n\nПараметры: WINDOW = 10, MAX_ERROR = 0.25`}</CodeExample><p>Для <code>lag</code> и <code>delta</code> первые N строк не имеют достаточной истории. Для функций <code>moving_*</code> результат появляется после заполнения первого полного окна. Пропуск внутри окна делает результат этого окна неопределённым.</p></section>
 
-        <section id="channel-mapping" className="docs-section"><div className="docs-heading"><span>06</span><div><h2>Почему названия каналов отличаются</h2><p>В правилах используются единые имена, чтобы одно правило подходило для логов разных производителей.</p></div></div><div className="docs-mapping-flow"><code>Boost Pressure Actual (bar)</code><span>сопоставление</span><code>[boost.actual]</code></div><p>Вычисляемый канал обращается к точному названию столбца текущего файла. Правило анализа использует короткое единое имя WOT Lab. Обычно приложение находит соответствие автоматически.</p><p>Если выбран не тот столбец или название вашего логгера не распознано, откройте <strong>Settings → Diagnostics → Map channels</strong> или нажмите <strong>Map channels</strong> в редакторе правил и выберите соответствие вручную.</p><div className="docs-note"><b>Единицы не пересчитываются</b><span>Порог правила должен соответствовать единицам настоящего канала. Например, порог в bar нельзя без изменения применять к значению в kPa.</span></div></section>
+        <section id="channel-mapping" className="docs-section"><div className="docs-heading"><span>06</span><div><h2>Почему названия каналов отличаются</h2><p>В правилах используются единые имена, чтобы одно правило подходило для логов разных производителей.</p></div></div><div className="docs-mapping-flow"><code>Boost Pressure Actual (bar)</code><span>сопоставление</span><code>[boost.actual]</code></div><p>Вычисляемый канал обращается к точному названию столбца текущего файла. Правило анализа использует короткое единое имя WOT Lab. Обычно приложение находит соответствие автоматически.</p><p>Если выбран не тот столбец или название вашего логгера не распознано, откройте <strong>Settings → Diagnostics → Map channels</strong> или нажмите <strong>Map channels</strong> в редакторе правил и выберите соответствие вручную. В списке доступны как исходные, так и вычисляемые каналы: результат формулы можно связать с единым именем и использовать в диагностических правилах.</p><div className="docs-note"><b>Единицы не пересчитываются</b><span>Порог правила должен соответствовать единицам настоящего канала. Например, порог в bar нельзя без изменения применять к значению в kPa.</span></div></section>
 
         <section id="recipes" className="docs-section"><div className="docs-heading"><span>07</span><div><h2>Готовые примеры</h2><p>Замените названия в квадратных скобках на названия каналов своего лога.</p></div></div><div className="docs-recipes"><article><span>НАДДУВ</span><h3>Ошибка наддува</h3><CodeExample>{`[Boost Target] - [Boost Actual]`}</CodeExample></article><article><span>ТОПЛИВО</span><h3>Ошибка лямбды</h3><CodeExample>{`[Lambda Actual] - [Lambda Target]`}</CodeExample></article><article><span>СГЛАЖИВАНИЕ</span><h3>Сглаженный сигнал</h3><CodeExample>{`moving_avg([Fuel Pressure Actual], 20)`}</CodeExample></article><article><span>ИЗМЕНЕНИЕ</span><h3>Изменение за окно</h3><CodeExample>{`delta([Engine Speed (rpm)], 5)`}</CodeExample></article><article><span>ОГРАНИЧЕНИЕ</span><h3>Ограничение диапазона</h3><CodeExample>{`clamp([Throttle Position], 0, 100)`}</CodeExample></article><article><span>УСЛОВИЕ</span><h3>Условный сигнал</h3><CodeExample>{`if([Engine Speed] > MIN_RPM, [Boost Actual], 0)`}</CodeExample></article></div></section>
 

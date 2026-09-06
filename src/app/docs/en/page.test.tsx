@@ -14,7 +14,9 @@ describe("EnglishDocumentationPage", () => {
     expect(screen.getByText("moving_avg(expr, N)")).toBeTruthy();
     expect(screen.getByRole("link", { name: "EN" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "RU" }).getAttribute("href")).toBe("/docs");
+    expect(screen.getByRole("link", { name: "Built-in rules" }).getAttribute("href")).toBe("/docs/en/rules");
     expect(screen.getByText(/Every function listed below works both in a calculated channel expression/)).toBeTruthy();
     expect(screen.getByText(/Either side of a condition can use parameters/)).toBeTruthy();
+    expect(screen.getByText(/Both source and calculated channels are available/)).toBeTruthy();
   });
 });

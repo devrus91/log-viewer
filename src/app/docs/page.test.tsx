@@ -15,8 +15,10 @@ describe("DocumentationPage", () => {
     expect(screen.getByText("[boost.actual]", { selector: "code" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "RU" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "EN" }).getAttribute("href")).toBe("/docs/en");
+    expect(screen.getByRole("link", { name: "Встроенные правила" }).getAttribute("href")).toBe("/docs/rules");
     expect(screen.getByText(/Все перечисленные ниже функции работают как в выражении вычисляемого канала/)).toBeTruthy();
     expect(screen.getByText(/В левой и правой частях условия можно использовать параметры/)).toBeTruthy();
+    expect(screen.getByText(/В списке доступны как исходные, так и вычисляемые каналы/)).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /Вернуться|К просмотру/ })).toHaveLength(2);
   });
 });

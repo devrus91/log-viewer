@@ -11,6 +11,7 @@ describe("workspace diagnostic focus", () => {
       activeChannelId: "existing",
       nearestChannelFocusEnabled: true,
       metadata: { rows: 100, averageSampleRate: 10 } as LogMetadata,
+      range: [10, 80],
     });
   });
 
@@ -26,6 +27,8 @@ describe("workspace diagnostic focus", () => {
     const state = useWorkspaceStore.getState();
     expect(state.selectedChannelIds).toEqual(["existing", "related"]);
     expect(state.activeChannelId).toBe("related");
+    expect(state.range).toEqual([10, 80]);
+    expect(state.cursorIndex).toBe(35);
   });
 
   it("persists the nearest-channel focus preference", () => {

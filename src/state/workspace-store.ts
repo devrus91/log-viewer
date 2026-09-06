@@ -205,9 +205,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setDiagnostics: (diagnostics) => set({ diagnostics, diagnosticsRunning: false }),
   setDiagnosticFilter: (diagnosticFilter) => set({ diagnosticFilter }),
   focusDiagnostic: (event) => {
-    const state = get(); const padding = Math.max(1, Math.round((state.metadata?.averageSampleRate ?? 10) * 2)); const related = event.relatedChannels.filter((id) => state.channels.some((channel) => channel.id === id));
+    const state = get(); const related = event.relatedChannels.filter((id) => state.channels.some((channel) => channel.id === id));
     const selectedChannelIds = Array.from(new Set([...state.selectedChannelIds, ...related]));
-    set({ mode: "single", selectedDiagnosticId: event.id, selectedChannelIds, activeChannelId: related[0] ?? state.activeChannelId, range: [Math.max(0, event.startIndex - padding), Math.min((state.metadata?.rows ?? 1) - 1, event.endIndex + padding)], cursorIndex: event.peakIndex });
+    set({ mode: "single", selectedDiagnosticId: event.id, selectedChannelIds, activeChannelId: related[0] ?? state.activeChannelId, cursorIndex: event.peakIndex });
   },
   closeDiagnostic: () => set({ selectedDiagnosticId: null }),
   setDiagnosticProfiles: (diagnosticProfiles, activeDiagnosticProfileId) => set({ diagnosticProfiles, activeDiagnosticProfileId }),

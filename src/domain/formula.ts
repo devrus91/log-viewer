@@ -8,7 +8,7 @@ export type FormulaNode =
 
 type Token = { type: "number" | "identifier" | "channel" | "operator" | "paren" | "comma"; value: string };
 
-const FUNCTIONS: Record<string, (...values: number[]) => number> = {
+const SCALAR_FUNCTIONS: Record<string, (...values: number[]) => number> = {
   abs: Math.abs,
   min: Math.min,
   max: Math.max,
@@ -21,6 +21,19 @@ const FUNCTIONS: Record<string, (...values: number[]) => number> = {
   ceil: Math.ceil,
   if: (condition, yes, no) => condition ? yes : no,
 };
+
+export const FORMULA_WINDOW_FUNCTIONS = ["lag", "delta", "moving_avg", "moving_min", "moving_max", "moving_sum"] as const;
+const WINDOW_FUNCTIONS = new Set<string>(FORMULA_WINDOW_FUNCTIONS);
+const MAX_WINDOW_SIZE = 10_000;
+
+export interface FormulaEvaluationContext {
+  rowCount: number;
+  windowCache: WeakMap<FormulaNode, Float64Array>;
+}
+
+export function createFormulaEvaluationContext(rowCount: number): FormulaEvaluationContext {
+  return { rowCount: Math.max(0, rowCount), windowCache: new WeakMap() };
+}
 
 export function tokenize(expression: string): Token[] {
   const tokens: Token[] = [];
@@ -78,7 +91,7 @@ export function parseFormula(expression: string): FormulaNode {
         }
         if (tokens[position]?.value !== ")") throw new Error(`Missing ) after ${token.value}`);
         position += 1;
-        if (!FUNCTIONS[token.value.toLowerCase()]) throw new Error(`Unknown function "${token.value}"`);
+        if (!SCALAR_FUNCTIONS[token.value.toLowerCase()] && !WINDOW_FUNCTIONS.has(token.value.toLowerCase())) throw new Error(`Unknown function "${token.value}"`);
         return { type: "CallExpression", name: token.value.toLowerCase(), arguments: args };
       }
       return { type: "ParameterReference", name: token.value };
@@ -124,7 +137,53 @@ export function collectParameters(node: FormulaNode, result = new Set<string>())
   return result;
 }
 
-export function evaluateNode(node: FormulaNode, row: number, channels: Record<string, Float64Array>, parameters: Record<string, number>): number {
+function windowSize(node: FormulaNode, channels: Record<string, Float64Array>, parameters: Record<string, number>, context: FormulaEvaluationContext): number {
+  const value = evaluateNode(node, 0, channels, parameters, context);
+  if (!Number.isFinite(value) || value < 1 || !Number.isInteger(value)) throw new Error("Window size must be a positive integer");
+  if (value > MAX_WINDOW_SIZE) throw new Error(`Window size cannot exceed ${MAX_WINDOW_SIZE}`);
+  return value;
+}
+
+function evaluateWindow(node: Extract<FormulaNode, { type: "CallExpression" }>, channels: Record<string, Float64Array>, parameters: Record<string, number>, context: FormulaEvaluationContext): Float64Array {
+  const cached = context.windowCache.get(node);
+  if (cached) return cached;
+  if (node.arguments.length !== 2) throw new Error(`${node.name} expects an expression and a window size`);
+
+  const size = windowSize(node.arguments[1], channels, parameters, context);
+  const source = new Float64Array(context.rowCount);
+  const result = new Float64Array(context.rowCount);
+  result.fill(Number.NaN);
+  for (let index = 0; index < context.rowCount; index += 1) source[index] = evaluateNode(node.arguments[0], index, channels, parameters, context);
+
+  if (node.name === "lag" || node.name === "delta") {
+    for (let index = size; index < context.rowCount; index += 1) result[index] = node.name === "lag" ? source[index - size] : source[index] - source[index - size];
+  } else if (node.name === "moving_avg" || node.name === "moving_sum") {
+    let sum = 0; let invalid = 0;
+    for (let index = 0; index < context.rowCount; index += 1) {
+      if (Number.isFinite(source[index])) sum += source[index]; else invalid += 1;
+      if (index >= size) { if (Number.isFinite(source[index - size])) sum -= source[index - size]; else invalid -= 1; }
+      if (index >= size - 1 && invalid === 0) result[index] = node.name === "moving_avg" ? sum / size : sum;
+    }
+  } else {
+    const wantMinimum = node.name === "moving_min";
+    const deque: number[] = []; let head = 0; let invalid = 0;
+    for (let index = 0; index < context.rowCount; index += 1) {
+      if (!Number.isFinite(source[index])) invalid += 1;
+      if (index >= size && !Number.isFinite(source[index - size])) invalid -= 1;
+      while (head < deque.length && deque[head] <= index - size) head += 1;
+      if (Number.isFinite(source[index])) {
+        while (deque.length > head && (wantMinimum ? source[deque.at(-1)!] >= source[index] : source[deque.at(-1)!] <= source[index])) deque.pop();
+        deque.push(index);
+      }
+      if (index >= size - 1 && invalid === 0 && head < deque.length) result[index] = source[deque[head]];
+    }
+  }
+
+  context.windowCache.set(node, result);
+  return result;
+}
+
+export function evaluateNode(node: FormulaNode, row: number, channels: Record<string, Float64Array>, parameters: Record<string, number>, context?: FormulaEvaluationContext): number {
   switch (node.type) {
     case "Literal": return node.value;
     case "ChannelReference": {
@@ -138,14 +197,14 @@ export function evaluateNode(node: FormulaNode, row: number, channels: Record<st
       return value;
     }
     case "UnaryExpression": {
-      const value = evaluateNode(node.argument, row, channels, parameters);
+      const value = evaluateNode(node.argument, row, channels, parameters, context);
       if (node.operator === "-") return -value;
       if (node.operator === "NOT") return value ? 0 : 1;
       return value;
     }
     case "BinaryExpression": {
-      const left = evaluateNode(node.left, row, channels, parameters);
-      const right = evaluateNode(node.right, row, channels, parameters);
+      const left = evaluateNode(node.left, row, channels, parameters, context);
+      const right = evaluateNode(node.right, row, channels, parameters, context);
       switch (node.operator) {
         case "+": return left + right;
         case "-": return left - right;
@@ -164,7 +223,13 @@ export function evaluateNode(node: FormulaNode, row: number, channels: Record<st
         default: throw new Error(`Unsupported operator "${node.operator}"`);
       }
     }
-    case "CallExpression": return FUNCTIONS[node.name](...node.arguments.map((argument) => evaluateNode(argument, row, channels, parameters)));
+    case "CallExpression": {
+      if (WINDOW_FUNCTIONS.has(node.name)) {
+        const evaluationContext = context ?? createFormulaEvaluationContext(Math.max(row + 1, ...Object.values(channels).map((values) => values.length)));
+        return evaluateWindow(node, channels, parameters, evaluationContext)[row];
+      }
+      return SCALAR_FUNCTIONS[node.name](...node.arguments.map((argument) => evaluateNode(argument, row, channels, parameters, context)));
+    }
   }
 }
 
@@ -174,7 +239,8 @@ export function evaluateFormula(expression: string, channels: Record<string, Flo
   dependencies.forEach((name) => { if (!channels[name]) throw new Error(`Unknown channel "${name}"`); });
   const length = rowCount ?? channels[dependencies[0]]?.length ?? 0;
   const result = new Float64Array(length);
-  for (let row = 0; row < length; row += 1) result[row] = evaluateNode(ast, row, channels, parameters);
+  const context = createFormulaEvaluationContext(length);
+  for (let row = 0; row < length; row += 1) result[row] = evaluateNode(ast, row, channels, parameters, context);
   return result;
 }
 

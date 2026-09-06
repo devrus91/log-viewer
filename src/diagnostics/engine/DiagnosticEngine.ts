@@ -1,4 +1,4 @@
-import { collectDependencies, evaluateNode, parseFormula, type FormulaNode } from "@/domain/formula";
+import { collectDependencies, createFormulaEvaluationContext, evaluateNode, parseFormula, type FormulaEvaluationContext, type FormulaNode } from "@/domain/formula";
 import type { ChannelMetadata, DiagnosticAnalysis, DiagnosticCondition, DiagnosticEvent, DiagnosticRuleConfig, DiagnosticSeverity, SemanticChannelMatch } from "@/domain/types";
 import { resolveChannels } from "@/diagnostics/semanticMapping/ChannelResolver";
 import { detectPulls } from "@/diagnostics/pullDetection/PullDetector";
@@ -36,8 +36,8 @@ function compare(left: number, right: number, operator: DiagnosticCondition["ope
   return left !== right;
 }
 
-function conditionAt(condition: CompiledCondition, row: number, columns: Record<string, Float64Array>, parameters: Record<string, number>): boolean {
-  try { return compare(evaluateNode(condition.left, row, columns, parameters), evaluateNode(condition.right, row, columns, parameters), condition.operator); }
+function conditionAt(condition: CompiledCondition, row: number, columns: Record<string, Float64Array>, parameters: Record<string, number>, context?: FormulaEvaluationContext): boolean {
+  try { return compare(evaluateNode(condition.left, row, columns, parameters, context), evaluateNode(condition.right, row, columns, parameters, context), condition.operator); }
   catch { return false; }
 }
 
@@ -47,7 +47,8 @@ function conditionMask(rule: DiagnosticRuleConfig, columns: Record<string, Float
   const anyMode = rule.detectorOptions.conditionMode === "any";
   if ((!anyMode && available.length !== conditions.length) || available.length === 0) return null;
   const mask = new Uint8Array(rowCount);
-  for (let row = 0; row < rowCount; row += 1) mask[row] = Number(anyMode ? available.some((condition) => conditionAt(condition, row, columns, rule.parameters)) : available.every((condition) => conditionAt(condition, row, columns, rule.parameters)));
+  const context = createFormulaEvaluationContext(rowCount);
+  for (let row = 0; row < rowCount; row += 1) mask[row] = Number(anyMode ? available.some((condition) => conditionAt(condition, row, columns, rule.parameters, context)) : available.every((condition) => conditionAt(condition, row, columns, rule.parameters, context)));
   return mask;
 }
 
@@ -76,10 +77,11 @@ function peakIndexFor(rule: DiagnosticRuleConfig, start: number, end: number, co
   const compiled = compileCondition(condition, columns);
   if (!compiled) return Math.floor((start + end) / 2);
   const direction = String(rule.detectorOptions.peakDirection ?? (condition.operator.includes("<") ? "min" : "max"));
+  const context = createFormulaEvaluationContext(Math.max(0, ...Object.values(columns).map((values) => values.length)));
   let peak = start;
-  let peakValue = evaluateNode(compiled.left, start, columns, rule.parameters) - evaluateNode(compiled.right, start, columns, rule.parameters);
+  let peakValue = evaluateNode(compiled.left, start, columns, rule.parameters, context) - evaluateNode(compiled.right, start, columns, rule.parameters, context);
   for (let row = start + 1; row <= end; row += 1) {
-    const value = evaluateNode(compiled.left, row, columns, rule.parameters) - evaluateNode(compiled.right, row, columns, rule.parameters);
+    const value = evaluateNode(compiled.left, row, columns, rule.parameters, context) - evaluateNode(compiled.right, row, columns, rule.parameters, context);
     if (direction === "min" ? value < peakValue : value > peakValue) { peak = row; peakValue = value; }
   }
   return peak;

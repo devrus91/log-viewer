@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseCsv } from "@/data/csv";
 import { analyzeDataset } from "./DiagnosticEngine";
 import { createDefaultDiagnosticRules } from "@/diagnostics/defaults/defaultRules";
+import { createCustomDiagnosticRule } from "@/diagnostics/diagnostic-rule-editor";
 import type { DiagnosticProfile } from "@/domain/types";
 
 function fixture() {
@@ -56,5 +57,15 @@ describe("built-in diagnostic rules", () => {
     analysis.events.filter((event) => event.ruleId !== "wot-pull-detection").forEach((event) => {
       expect(analysis.pulls.some((pull) => event.startIndex >= pull.startIndex && event.endIndex <= pull.endIndex)).toBe(true);
     });
+  });
+
+  it("executes window functions in a custom condition rule", () => {
+    const dataset = fixture();
+    const rule = { ...createCustomDiagnosticRule("custom-window"), conditions: [{ left: "moving_avg([boost.actual], WINDOW)", operator: "<" as const, right: "LIMIT" }], parameters: { WINDOW: 3, LIMIT: 1.5 }, durationMs: 0, cooldownMs: 0 };
+    const profile: DiagnosticProfile = { id: "test", name: "Test", origin: "user", vehicleSpecific: true, rules: [rule] };
+
+    const analysis = analyzeDataset({ channels: dataset.channels, columns: dataset.columns, profile });
+
+    expect(analysis.events.some((event) => event.ruleId === rule.id)).toBe(true);
   });
 });

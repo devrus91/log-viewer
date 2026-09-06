@@ -14,6 +14,7 @@ describe("ImportScreen folder catalog", () => {
 
   it("shows CSV logs from the selected folder and filters them", () => {
     render(<ImportScreen />);
+    expect(screen.getByRole("link", { name: "Documentation" }).getAttribute("href")).toBe("/docs");
     const input = screen.getByLabelText("Choose folder with CSV telemetry logs");
 
     fireEvent.change(input, { target: { files: [folderFile("warmup.csv", "dyno/warmup.csv"), folderFile("pull-2.csv", "dyno/session/pull-2.csv"), folderFile("notes.txt", "dyno/notes.txt", "text/plain")] } });

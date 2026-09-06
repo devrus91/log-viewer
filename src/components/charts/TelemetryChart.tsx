@@ -6,6 +6,7 @@ import { datasetStore } from "@/data/dataset-store";
 import { useWorkspaceStore } from "@/state/workspace-store";
 import { CHART_FONT_SIZES, CHART_LINE_WIDTHS, SERIES_DASH_PATTERNS, diagnosticMarkerVisible, filterTooltipRows, formatChartValue, gridStroke, interpolateValue } from "./chart-preferences";
 import { resolveTooltipLeft } from "./tooltip-position";
+import { calculateWheelZoomRange } from "./wheel-zoom";
 
 interface TelemetryChartProps {
   channelIds: string[];
@@ -117,11 +118,11 @@ export function TelemetryChart({ channelIds, height = 360, fillHeight = false, t
           plot.over.addEventListener("mouseleave", () => setChartTooltip(null));
           plot.over.addEventListener("wheel", (event) => {
             if (wheelZoomMode === "disabled" || (wheelZoomMode === "modifier" && !event.ctrlKey && !event.metaKey)) return;
-            if (plot.scales.x.min === undefined || plot.scales.x.max === undefined) return;
+            if (event.deltaY === 0) return;
             event.preventDefault();
-            const anchor = plot.posToVal(event.offsetX, "x");
-            const factor = event.deltaY > 0 ? 1.18 : .84;
-            plot.setScale("x", { min: anchor - (anchor - plot.scales.x.min) * factor, max: anchor + (plot.scales.x.max - anchor) * factor });
+            const anchorRatio = event.offsetX / Math.max(1, plot.over.clientWidth);
+            const nextRange = calculateWheelZoomRange([start, end], xValues.length, anchorRatio, event.deltaY);
+            if (nextRange[0] !== start || nextRange[1] !== end) setRange(nextRange);
           }, { passive: false });
           if (markerEvents.length && xChannelId === datasetStore.metadata?.timeChannelId) plot.over.addEventListener("click", (event) => {
             const closest = markerEvents.map((item) => ({ item, distance: Math.abs(plot.valToPos(item.peakTime, "x") - event.offsetX) })).sort((a, b) => a.distance - b.distance)[0];

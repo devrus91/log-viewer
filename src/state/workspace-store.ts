@@ -56,6 +56,7 @@ interface WorkspaceState {
   diagnosticMarkerMode: DiagnosticMarkerMode;
   pinnedTooltipChannelIds: string[];
   setDataset: (metadata: LogMetadata, channels: ChannelMetadata[], diagnostics?: DiagnosticAnalysis) => void;
+  closeDataset: () => void;
   addCalculatedChannel: (channel: ChannelMetadata) => void;
   updateCalculatedChannels: (channels: ChannelMetadata[], activeChannelId: string) => void;
   setMode: (mode: WorkspaceMode) => void;
@@ -169,6 +170,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       heatmap: { ...defaultHeatmap, xChannelId: rpm, yChannelId: throttle, valueChannelId: boost },
     });
   },
+  closeDataset: () => set({ metadata: null, channels: [], selectedChannelIds: [], activeChannelId: null, hiddenChannelIds: [], xChannelId: "", range: [0, 1], cursorIndex: null, diagnostics: null, selectedDiagnosticId: null }),
   addCalculatedChannel: (channel) => set((state) => {
     const existing = state.channels.find((item) => item.id === channel.id || (item.type === "calculated" && item.name.toLocaleLowerCase() === channel.name.toLocaleLowerCase()));
     const channels = existing ? state.channels.map((item) => item.id === existing.id ? channel : item) : [...state.channels, channel];
